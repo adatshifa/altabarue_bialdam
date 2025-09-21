@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة التبرع بالدم</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #ef4444; /* red-500 */
+            --primary-dark: #dc2626; /* red-600 */
+            --secondary-color: #10b981; /* emerald-500 */
+            --bg-body: #f1f5f9;
+            --bg-card: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --radius: 0.8rem;
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-body); padding-top: 5rem; }
+        .urgent { border-right: 5px solid #ef4444; }
+        .soon { border-right: 5px solid #f59e0b; }
+        .later { border-right: 5px solid #22c55e; }
+        .reported { border-left: 5px solid #f97316; }
+        .modal { transition: opacity 0.25s ease; }
+        .modal-container { transition: transform 0.25s ease; }
+        .side-bar { transition: right 0.3s ease-in-out; }
+        .overlay.active { opacity: 1; visibility: visible; }
+        .blood-tag {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            box-shadow: var(--shadow-md);
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div id="overlay" class="overlay fixed inset-0 bg-black bg-opacity-50 z-30 opacity-0 invisible transition-opacity duration-300"></div>
+
+    <header class="bg-white shadow-md fixed top-0 right-0 left-0 z-40">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="#" class="text-2xl font-bold text-red-600">قطرة حياة</a>
+            <div class="flex items-center gap-4">
+                <a href="dashboard.html" class="text-sm text-gray-600 hover:text-red-600 transition duration-300 hidden sm:block">دخول المشرف</a>
+                <button id="menu-btn" class="fas fa-bars text-xl text-gray-600 cursor-pointer h-10 w-10 flex items-center justify-center rounded-full hover:bg-gray-100"></button>
+            </div>
+        </div>
+    </header>
+
+    <aside id="side-bar" class="side-bar fixed top-0 -right-full w-72 h-full bg-white shadow-lg z-50 p-4 flex flex-col">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold text-red-600">القائمة</h2>
+            <button id="close-btn" class="fas fa-times text-2xl text-gray-500 cursor-pointer hover:text-red-500"></button>
+        </div>
+        <nav class="flex flex-col gap-2">
+            <a href="#" class="flex items-center gap-4 p-3 rounded-lg hover:bg-red-50 transition-colors"><i class="fas fa-home text-red-500 w-6 text-center"></i><span>الرئيسية</span></a>
+            <a href="#" class="flex items-center gap-4 p-3 rounded-lg hover:bg-red-50 transition-colors"><i class="fas fa-info-circle text-red-500 w-6 text-center"></i><span>حول المنصة</span></a>
+            <a href="dashboard.html" class="flex items-center gap-4 p-3 rounded-lg hover:bg-red-50 transition-colors sm:hidden"><i class="fas fa-user-shield text-red-500 w-6 text-center"></i><span>دخول المشرف</span></a>
+        </nav>
+    </aside>
+
+    <main class="container mx-auto px-4 py-8">
+
+        <section class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">أهلاً بك في منصة قطرة حياة</h1>
+            <p class="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">"وَمَنْ أَحْيَاهَا فَكَأَنَّمَا أَحْيَا النَّاسَ جَمِيعًا"</p>
+            <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
+                <button id="open-donor-modal" class="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-lg transition text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1">
+                    <i class="fas fa-hand-holding-heart mr-2"></i> أريد التبرع
+                </button>
+                <button id="open-request-modal" class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-8 rounded-lg transition text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1">
+                    <i class="fas fa-bullhorn mr-2"></i> أحتاج إلى دم
+                </button>
+            </div>
+        </section>
+
+        <section>
+            <h2 class="text-3xl font-bold mb-6 text-center text-gray-800">الطلبات الحالية</h2>
+            <div id="dashboard" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="text-center p-10 bg-white rounded-xl shadow-lg md:col-span-2 lg:col-span-3">
+                    <p class="text-gray-500">جاري تحميل الطلبات...</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+    
+    <div id="request-modal" class="modal fixed inset-0 flex items-center justify-center hidden z-50 p-4">
+        <div class="modal-overlay absolute inset-0 bg-gray-900 opacity-50"></div>
+        <div class="modal-container bg-white w-full max-w-lg mx-auto rounded-xl shadow-lg z-50 transform scale-95">
+            <div class="py-4 px-6">
+                <div class="flex justify-between items-center pb-3 border-b">
+                    <p class="text-2xl font-bold">إضافة طلب تبرع جديد</p>
+                    <button class="modal-close cursor-pointer z-50 text-3xl">&times;</button>
+                </div>
+                <div class="py-4 max-h-[70vh] overflow-y-auto">
+                    <form id="donation-form" class="space-y-4">
+                        <input type="text" id="hospital" placeholder="اسم المستشفى" class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" required>
+                        <select id="wilaya" class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-white" required>
+                            <option value="" disabled selected>اختر الولاية</option>
+                        </select>
+                        <input type="text" id="location" placeholder="المكان / المدينة" class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" required>
+                        <input type="tel" id="phone1" placeholder="رقم الهاتف الأساسي" class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" required>
+                        <select id="blood-type" class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-white" required>
+                            <option value="" disabled selected>اختر فصيلة الدم المطلوبة</option>
+                            <option value="A+">A+</option> <option value="A-">A-</option>
+                            <option value="B+">B+</option> <option value="B-">B-</option>
+                            <option value="AB+">AB+</option> <option value="AB-">AB-</option>
+                            <option value="O+">O+</option> <option value="O-">O-</option>
+                        </select>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">درجة الاستعجال</label>
+                            <select id="urgency" class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-white" required>
+                                <option value="urgent">عاجل جداً</option>
+                                <option value="soon">قريب</option>
+                                <option value="later">غير مستعجل</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition text-lg">إرسال الطلب</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="donor-modal" class="modal fixed inset-0 flex items-center justify-center hidden z-50 p-4">
+        <div class="modal-overlay absolute inset-0 bg-gray-900 opacity-50"></div>
+        <div id="quiz-container" class="modal-container bg-white w-full max-w-lg mx-auto rounded-xl shadow-lg z-50 transform scale-95">
+             <div class="py-4 px-6">
+                <div class="flex justify-between items-center pb-3 border-b">
+                    <p class="text-2xl font-bold">اختبار أهلية التبرع</p>
+                    <button class="modal-close cursor-pointer z-50 text-3xl">&times;</button>
+                </div>
+                <div class="py-4 space-y-5">
+                    <div class="quiz-question">
+                        <p class="font-semibold mb-2">1. هل عمرك بين 18 و 65 عاماً؟</p>
+                        <div class="flex gap-4"><label><input type="radio" name="q1" value="yes" class="mr-1"> نعم</label><label><input type="radio" name="q1" value="no" class="mr-1"> لا</label></div>
+                    </div>
+                    <div class="quiz-question">
+                        <p class="font-semibold mb-2">2. هل وزنك 50 كجم أو أكثر؟</p>
+                        <div class="flex gap-4"><label><input type="radio" name="q2" value="yes" class="mr-1"> نعم</label><label><input type="radio" name="q2" value="no" class="mr-1"> لا</label></div>
+                    </div>
+                    <div class="quiz-question">
+                        <p class="font-semibold mb-2">3. هل تبرعت بالدم خلال الأشهر الثلاثة الماضية؟</p>
+                        <div class="flex gap-4"><label><input type="radio" name="q3" value="no" class="mr-1"> نعم</label><label><input type="radio" name="q3" value="yes" class="mr-1"> لا</label></div>
+                    </div>
+                     <p id="quiz-error" class="text-red-500 text-sm hidden">الرجاء الإجابة على جميع الأسئلة.</p>
+                    <button id="check-eligibility" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition text-lg">تحقق من الأهلية</button>
+                </div>
+            </div>
+        </div>
+         <div id="result-container" class="hidden modal-container bg-white w-full max-w-lg mx-auto rounded-xl shadow-lg z-50 transform scale-95 p-6 text-center">
+            <p id="eligibility-result" class="text-2xl font-bold mb-4"></p>
+            <p id="eligibility-message" class="text-gray-600 mb-6"></p>
+            <button class="modal-close w-full sm:w-auto bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg">إغلاق</button>
+        </div>
+    </div>
+    
+    <div id="message-modal" class="modal fixed inset-0 flex items-center justify-center hidden z-50 p-4">
+         <div class="modal-overlay absolute inset-0 bg-gray-900 opacity-50"></div>
+        <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded-xl shadow-lg z-50 transform scale-95">
+            <div class="py-4 px-6 text-center">
+                <p id="modal-title" class="text-2xl font-bold mb-3"></p>
+                <p id="modal-body" class="mb-5"></p>
+                <button class="modal-close bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-8 rounded-lg">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, query, doc, updateDoc, increment, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyBjGbfd-myjqLtqvdMp4b-h4LIaeZjfUto",
+          authDomain: "altabarue-bialdam.firebaseapp.com",
+          databaseURL: "https://altabarue-bialdam-default-rtdb.firebaseio.com",
+          projectId: "altabarue-bialdam",
+          storageBucket: "altabarue-bialdam.firebasestorage.app",
+          messagingSenderId: "1032387539358",
+          appId: "1:1032387539358:web:229d33a9d5a0f522c9268f",
+          measurementId: "G-GQ6M7F21PZ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // --- Algerian Wilayas Data ---
+        const algerianWilayas = [
+            "أدرار", "الشلف", "الأغواط", "أم البواقي", "باتنة", "بجاية", "بسكرة", "بشار", "البليدة", "البويرة",
+            "تمنراست", "تبسة", "تلمسان", "تيارت", "تيزي وزو", "الجزائر", "الجلفة", "جيجل", "سطيف", "سعيدة",
+            "سكيكدة", "سيدي بلعباس", "عنابة", "قالمة", "قسنطينة", "المدية", "مستغانم", "المسيلة", "معسكر", "ورقلة",
+            "وهران", "البيض", "إليزي", "برج بوعريريج", "بومرداس", "الطارف", "تندوف", "تيسمسيلت", "الوادي", "خنشلة",
+            "سوق أهراس", "تيبازة", "ميلة", "عين الدفلى", "النعامة", "عين تموشنت", "غرداية", "غليزان", "تيميمون",
+            "برج باجي مختار", "أولاد جلال", "بني عباس", "عين صالح", "عين قزام", "تقرت", "جانت", "المغير", "المنيعة"
+        ];
+        
+        // --- Populate Wilayas Dropdown ---
+        const wilayaSelect = document.getElementById('wilaya');
+        algerianWilayas.forEach(wilaya => {
+            const option = document.createElement('option');
+            option.value = wilaya;
+            option.textContent = wilaya;
+            wilayaSelect.appendChild(option);
+        });
+
+        // --- DOM Elements ---
+        const donationForm = document.getElementById('donation-form');
+        const dashboard = document.getElementById('dashboard');
+
+        // --- Modal Management ---
+        const modals = document.querySelectorAll('.modal');
+        const overlay = document.getElementById('overlay');
+        
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if(modal) {
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    overlay.classList.add('active');
+                    modal.querySelector('.modal-container').classList.remove('scale-95');
+                }, 10);
+            }
+        }
+
+        function closeModal() {
+            const activeModal = document.querySelector('.modal:not(.hidden)');
+            if(activeModal) {
+                 overlay.classList.remove('active');
+                 activeModal.querySelector('.modal-container').classList.add('scale-95');
+                 setTimeout(() => activeModal.classList.add('hidden'), 250);
+            }
+        }
+        
+        document.getElementById('open-request-modal').addEventListener('click', () => openModal('request-modal'));
+        document.getElementById('open-donor-modal').addEventListener('click', () => openModal('donor-modal'));
+        modals.forEach(modal => {
+            modal.addEventListener('click', e => {
+                if (e.target.classList.contains('modal-close') || e.target.classList.contains('modal-overlay')) {
+                    closeModal();
+                }
+            });
+        });
+
+        // --- Generic Message Modal ---
+        const msgModal = {
+            title: document.getElementById('modal-title'),
+            body: document.getElementById('modal-body'),
+            show: (title, body) => {
+                msgModal.title.textContent = title;
+                msgModal.body.textContent = body;
+                openModal('message-modal');
+            }
+        };
+
+        // --- Sidebar Management ---
+        const sideBar = document.getElementById('side-bar');
+        document.getElementById('menu-btn').addEventListener('click', () => {
+             sideBar.classList.remove('-right-full');
+             sideBar.classList.add('right-0');
+             overlay.classList.add('active');
+        });
+        const closeSidebar = () => {
+             sideBar.classList.add('-right-full');
+             sideBar.classList.remove('right-0');
+             overlay.classList.remove('active');
+        };
+        document.getElementById('close-btn').addEventListener('click', closeSidebar);
+        overlay.addEventListener('click', closeSidebar);
+
+
+        // --- Firestore Logic ---
+        const requestsCollection = collection(db, 'donation_requests');
+
+        donationForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                await addDoc(requestsCollection, {
+                    hospital: donationForm.hospital.value,
+                    wilaya: donationForm.wilaya.value,
+                    location: donationForm.location.value,
+                    phone1: donationForm.phone1.value,
+                    bloodType: donationForm['blood-type'].value,
+                    urgency: donationForm.urgency.value,
+                    reports: 0,
+                    status: 'pending', // New status field
+                    createdAt: serverTimestamp()
+                });
+                donationForm.reset();
+                closeModal();
+                msgModal.show('تم بنجاح', 'شكراً لك، تم إرسال طلبك للمراجعة وسيتم نشره بعد الموافقة عليه.');
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                msgModal.show('خطأ', 'حدث خطأ غير متوقع أثناء إضافة الطلب.');
+            }
+        });
+
+        const fetchAndDisplayRequests = () => {
+            // Query only for 'approved' requests
+            const q = query(requestsCollection, where("status", "==", "approved"));
+            onSnapshot(q, (querySnapshot) => {
+                dashboard.innerHTML = '';
+                if (querySnapshot.empty) {
+                     dashboard.innerHTML = `<div class="text-center p-10 bg-white rounded-xl shadow-lg md:col-span-2 lg:col-span-3"><p class="text-gray-500 text-xl">لا توجد طلبات موافق عليها حالياً.</p></div>`;
+                    return;
+                }
+                querySnapshot.docs
+                  .sort((a, b) => b.data().createdAt?.toMillis() - a.data().createdAt?.toMillis())
+                  .forEach((doc) => {
+                    const request = doc.data();
+                    const card = document.createElement('div');
+                    card.className = `bg-white p-5 rounded-xl shadow-lg transition duration-300 transform hover:-translate-y-1 ${request.urgency}`;
+                    
+                    const date = request.createdAt ? new Date(request.createdAt.seconds * 1000).toLocaleDateString('ar-EG') : 'غير متوفر';
+                    let urgencyText, urgencyClass;
+                    if(request.urgency === 'urgent') { urgencyText = 'عاجل'; urgencyClass = 'bg-red-100 text-red-800'; }
+                    else if(request.urgency === 'soon') { urgencyText = 'قريب'; urgencyClass = 'bg-amber-100 text-amber-800'; }
+                    else { urgencyText = 'غير مستعجل'; urgencyClass = 'bg-green-100 text-green-800'; }
+
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start gap-4">
+                             <div>
+                                <h3 class="text-xl font-bold text-gray-800">${request.hospital}</h3>
+                                <p class="text-gray-600">${request.wilaya}, ${request.location}</p>
+                             </div>
+                             <div class="blood-tag">${request.bloodType}</div>
+                        </div>
+                        <div class="my-4 border-t pt-4 space-y-2">
+                            <p><strong class="font-semibold">الهاتف:</strong> <a href="tel:${request.phone1}" class="text-blue-600 hover:underline tracking-wider">${request.phone1}</a></p>
+                            <p><strong class="font-semibold">الاستعجال:</strong> <span class="text-sm font-semibold px-3 py-1 rounded-full ${urgencyClass}">${urgencyText}</span></p>
+                        </div>
+                        <div class="flex justify-between items-center text-sm text-gray-500">
+                             <p>أضيف بتاريخ: ${date}</p>
+                            <button data-id="${doc.id}" class="report-btn bg-amber-500 hover:bg-amber-600 text-white font-bold py-1 px-3 rounded-lg transition">
+                                إبلاغ
+                            </button>
+                        </div>
+                         ${request.reports > 0 ? `<p class="text-orange-600 font-bold text-xs mt-2 text-left">تم الإبلاغ عن هذا الطلب ${request.reports} مرات</p>` : ''}
+                    `;
+                    dashboard.appendChild(card);
+                });
+            });
+        };
+
+        dashboard.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('report-btn')) {
+                const docId = e.target.dataset.id;
+                if (!docId) return;
+                const docRef = doc(db, 'donation_requests', docId);
+                 try {
+                    await updateDoc(docRef, { reports: increment(1) });
+                    msgModal.show('شكراً لك', 'تم تسجيل بلاغك بنجاح.');
+                } catch (error) {
+                    console.error("Error reporting document: ", error);
+                    msgModal.show('خطأ', 'حدث خطأ أثناء تسجيل البلاغ.');
+                }
+            }
+        });
+
+        // --- Donor Quiz Logic ---
+        document.getElementById('check-eligibility').addEventListener('click', () => {
+            const q1 = document.querySelector('input[name="q1"]:checked');
+            const q2 = document.querySelector('input[name="q2"]:checked');
+            const q3 = document.querySelector('input[name="q3"]:checked');
+            const errorP = document.getElementById('quiz-error');
+            
+            if(!q1 || !q2 || !q3) {
+                errorP.classList.remove('hidden');
+                return;
+            }
+            errorP.classList.add('hidden');
+
+            const isEligible = q1.value === 'yes' && q2.value === 'yes' && q3.value === 'yes';
+            
+            document.getElementById('quiz-container').classList.add('hidden');
+            const resultContainer = document.getElementById('result-container');
+            resultContainer.classList.remove('hidden');
+
+            const resultText = document.getElementById('eligibility-result');
+            const resultMsg = document.getElementById('eligibility-message');
+
+            if (isEligible) {
+                resultText.textContent = '✅ أنت مؤهل للتبرع!';
+                resultText.className = "text-2xl font-bold mb-4 text-green-600";
+                resultMsg.textContent = 'شكراً لك على استعدادك للمساعدة. تبرعك يمكن أن ينقذ حياة.';
+            } else {
+                resultText.textContent = '❌ عذراً، أنت غير مؤهل حالياً.';
+                resultText.className = "text-2xl font-bold mb-4 text-red-600";
+                resultMsg.textContent = 'قد تكون هناك شروط أخرى تمنعك من التبرع. يرجى استشارة مختص طبي لمزيد من المعلومات.';
+            }
+        });
+
+        // Reset quiz when donor modal is re-opened
+        document.getElementById('open-donor-modal').addEventListener('click', () => {
+            document.getElementById('quiz-container').classList.remove('hidden');
+            document.getElementById('result-container').classList.add('hidden');
+            document.querySelectorAll('.quiz-question input[type="radio"]').forEach(radio => radio.checked = false);
+        });
+
+        // Initial Fetch
+        fetchAndDisplayRequests();
+    </script>
+</body>
+</html>
