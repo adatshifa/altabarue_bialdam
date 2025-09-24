@@ -9,50 +9,72 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Cairo', sans-serif; }
-        .urgent { border-right: 5px solid #f43f5e; }
-        .soon { border-right: 5px solid #f59e0b; }
-        .later { border-right: 5px solid #10b981; }
-        .verified-badge { background-color: #dcfce7; color: #166534; }
-        .unverified-badge { background-color: #fefce8; color: #854d0e; }
+        .tab-active { border-color: #0d9488; color: #0d9488; background-color: #f0fdfa; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
 
     <header class="bg-white shadow-md">
         <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-teal-600">لوحة تحكم أداة شفاء</h1>
+            <h1 class="text-2xl font-bold text-teal-600">لوحة تحكم شفاء</h1>
             <div>
-                <a href="index.html" class="text-sm text-gray-600 hover:text-teal-600 transition duration-300 ml-4">العودة للرئيسية</a>
-                <button id="logout-button" class="hidden bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 px-4 rounded-lg transition">
-                    تسجيل الخروج
-                </button>
+                <a href="index.html" class="text-sm text-gray-600 hover:text-teal-600 ml-4">الرئيسية</a>
+                <button id="logout-button" class="hidden bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 px-4 rounded-lg">الخروج</button>
             </div>
         </div>
     </header>
 
     <main class="container mx-auto px-4 py-8">
-        <div id="admin-login-section" class="max-w-md mx-auto bg-white p-8 rounded-xl shadow-lg mb-8">
-            <h2 class="text-2xl font-bold mb-6 text-center">تسجيل الدخول</h2>
+        <div id="admin-login-section" class="max-w-md mx-auto bg-white p-8 rounded-xl shadow-lg">
+            <h2 class="text-2xl font-bold mb-6 text-center">تسجيل دخول المشرف</h2>
             <form id="login-form">
                 <input type="email" id="login-email" placeholder="البريد الإلكتروني" class="mb-4 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" required>
                 <input type="password" id="login-password" placeholder="كلمة المرور" class="mb-4 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" required>
-                <button type="submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition">دخول</button>
+                <button type="submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg">دخول</button>
             </form>
             <p id="login-error" class="text-red-500 text-center mt-4"></p>
         </div>
         
         <div id="admin-dashboard-container" class="hidden">
-            <h2 class="text-3xl font-bold mb-6 text-center text-gray-700">إدارة جميع الطلبات</h2>
-            <div id="dashboard" class="space-y-4">
-                 </div>
+            <div class="mb-6 border-b border-gray-200">
+                <nav class="flex -mb-px" aria-label="Tabs">
+                    <button id="tab-requests" class="tab-btn w-1/2 py-4 px-1 text-center border-b-2 font-medium text-lg tab-active">إدارة الطلبات</button>
+                    <button id="tab-centers" class="tab-btn w-1/2 py-4 px-1 text-center border-b-2 font-medium text-lg text-gray-500 hover:text-gray-700 hover:border-gray-300">إدارة أماكن التبرع</button>
+                </nav>
+            </div>
+
+            <div id="requests-panel">
+                <h2 class="text-2xl font-bold mb-4 text-center text-gray-700">جميع الطلبات المبلغ عنها</h2>
+                <div id="requests-dashboard" class="space-y-4"></div>
+            </div>
+
+            <div id="centers-panel" class="hidden">
+                <h2 class="text-2xl font-bold mb-4 text-center text-gray-700">إدارة أماكن التبرع</h2>
+                <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
+                    <form id="center-form" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                        <input type="hidden" id="center-id">
+                        <div>
+                            <label for="center-name" class="block font-semibold">اسم المركز</label>
+                            <input type="text" id="center-name" class="mt-1 w-full px-4 py-2 border rounded-lg" required>
+                        </div>
+                        <div>
+                            <label for="center-wilaya" class="block font-semibold">الولاية</label>
+                            <input type="text" id="center-wilaya" class="mt-1 w-full px-4 py-2 border rounded-lg" required>
+                        </div>
+                        <button type="submit" id="center-submit-btn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg">إضافة مركز</button>
+                    </form>
+                </div>
+                <div id="centers-list" class="space-y-3"></div>
+            </div>
         </div>
     </main>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, query, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, doc, deleteDoc, updateDoc, addDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // Firebase config
         const firebaseConfig = {
           apiKey: "AIzaSyBjGbfd-myjqLtqvdMp4b-h4LIaeZjfUto",
           authDomain: "altabarue-bialdam.firebaseapp.com",
@@ -68,114 +90,161 @@
         const auth = getAuth(app);
 
         // --- DOM Elements ---
+        const loginSection = document.getElementById('admin-login-section');
+        const dashboardContainer = document.getElementById('admin-dashboard-container');
+        const logoutButton = document.getElementById('logout-button');
         const loginForm = document.getElementById('login-form');
         const loginError = document.getElementById('login-error');
-        const adminLoginSection = document.getElementById('admin-login-section');
-        const logoutButton = document.getElementById('logout-button');
-        const adminDashboardContainer = document.getElementById('admin-dashboard-container');
-        const dashboard = document.getElementById('dashboard');
-        
-        // --- Auth State ---
+        const requestsDashboard = document.getElementById('requests-dashboard');
+        // Tabs
+        const tabRequests = document.getElementById('tab-requests');
+        const tabCenters = document.getElementById('tab-centers');
+        const requestsPanel = document.getElementById('requests-panel');
+        const centersPanel = document.getElementById('centers-panel');
+        // Centers Management
+        const centerForm = document.getElementById('center-form');
+        const centersList = document.getElementById('centers-list');
+        const centerSubmitBtn = document.getElementById('center-submit-btn');
+
+        // --- Auth Logic ---
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                adminLoginSection.classList.add('hidden');
-                adminDashboardContainer.classList.remove('hidden');
+                loginSection.classList.add('hidden');
+                dashboardContainer.classList.remove('hidden');
                 logoutButton.classList.remove('hidden');
                 listenToRequests();
+                listenToCenters();
             } else {
-                adminLoginSection.classList.remove('hidden');
-                adminDashboardContainer.classList.add('hidden');
+                loginSection.classList.remove('hidden');
+                dashboardContainer.classList.add('hidden');
                 logoutButton.classList.add('hidden');
-                dashboard.innerHTML = '';
             }
         });
-
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
             signInWithEmailAndPassword(auth, loginForm['login-email'].value, loginForm['login-password'].value)
-                .catch(() => { loginError.textContent = 'البريد الإلكتروني أو كلمة المرور غير صحيحة.'; });
+                .catch(() => { loginError.textContent = 'بيانات الدخول غير صحيحة.'; });
         });
         logoutButton.addEventListener('click', () => signOut(auth));
 
-        // --- Main Logic ---
+        // --- Tab Navigation Logic ---
+        tabRequests.addEventListener('click', () => {
+            requestsPanel.classList.remove('hidden');
+            centersPanel.classList.add('hidden');
+            tabRequests.classList.add('tab-active');
+            tabCenters.classList.remove('tab-active');
+        });
+        tabCenters.addEventListener('click', () => {
+            centersPanel.classList.remove('hidden');
+            requestsPanel.classList.add('hidden');
+            tabCenters.classList.add('tab-active');
+            tabRequests.classList.remove('tab-active');
+        });
+
+        // --- Requests Management Logic ---
         const requestsCollection = collection(db, 'donation_requests');
-
-        const createCardHTML = (doc) => {
+        const createRequestCardHTML = (doc) => {
             const request = doc.data();
-            const date = request.createdAt ? new Date(request.createdAt.seconds * 1000).toLocaleString('ar-EG') : 'غير متوفر';
-            
-            // **MODIFIED**: Toggle button text and functionality based on 'verified' status
-            const verifyButton = request.verified 
-                ? `<button data-id="${doc.id}" data-verified="true" class="verify-btn bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded-lg"><i class="fas fa-times mr-1"></i> إلغاء التوثيق</button>`
-                : `<button data-id="${doc.id}" data-verified="false" class="verify-btn bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded-lg"><i class="fas fa-check mr-1"></i> توثيق الطلب</button>`;
-
-            const statusBadge = request.verified
-                ? `<span class="verified-badge text-xs font-semibold px-3 py-1 rounded-full">موثق</span>`
-                : `<span class="unverified-badge text-xs font-semibold px-3 py-1 rounded-full">غير موثق</span>`;
+            const date = request.createdAt ? new Date(request.createdAt.seconds * 1000).toLocaleString('ar-EG-u-nu-latn') : 'غير متوفر';
+            // MODIFIED: Show reports count
+            const reportsHTML = request.reports > 0 
+                ? `<p class="text-orange-600 font-bold flex items-center gap-2"><i class="fas fa-flag"></i> بلاغات: ${request.reports}</p>` 
+                : '';
+            const detailsHTML = request.details ? `<blockquote class="mt-2 p-2 bg-gray-50 border-r-4">${request.details}</blockquote>` : '';
 
             return `
-                <div class="bg-white p-5 rounded-xl shadow-lg ${request.urgency}">
-                    <div class="flex flex-wrap justify-between items-start gap-2">
+                <div class="bg-white p-4 rounded-xl shadow-md border-r-4 ${request.verified ? 'border-green-500' : 'border-gray-300'}">
+                    <div class="flex flex-wrap justify-between items-start gap-2 mb-3">
                          <div>
-                            <h3 class="text-xl font-bold">${request.hospital}</h3>
-                            <p class="text-gray-600">${request.wilaya}, ${request.location}</p>
+                            <h3 class="text-lg font-bold">${request.hospital} (${request.wilaya})</h3>
+                            <p class="text-gray-600">${request.phone1}</p>
                          </div>
                          <div class="flex items-center gap-4">
-                            ${statusBadge}
+                            ${reportsHTML}
                             <span class="font-bold text-rose-600 text-lg">${request.bloodType}</span>
                          </div>
                     </div>
-                    <div class="my-4 border-t pt-4">
-                        <p><strong>الهاتف:</strong> <a href="tel:${request.phone1}" class="text-blue-600">${request.phone1}</a></p>
-                    </div>
-                    <div class="flex justify-between items-center text-sm text-gray-500">
-                         <div>
-                            <p>تاريخ الإضافة: ${date}</p>
-                            ${request.reports > 0 ? `<p class="text-orange-600 font-bold">بلاغات: ${request.reports}</p>` : ''}
-                        </div>
-                        <div class="flex items-center space-x-2 space-x-reverse">
-                            ${verifyButton}
-                            <button data-id="${doc.id}" class="delete-btn bg-rose-600 hover:bg-rose-700 text-white py-1 px-3 rounded-lg"><i class="fas fa-trash mr-1"></i> حذف</button>
+                    ${detailsHTML}
+                    <div class="flex justify-between items-center text-sm text-gray-500 mt-3 border-t pt-3">
+                         <p>أضيف في: ${date}</p>
+                        <div class="flex items-center gap-2">
+                            <button data-id="${doc.id}" data-verified="${request.verified}" class="verify-btn ${request.verified ? 'bg-yellow-500' : 'bg-green-600'} text-white py-1 px-3 rounded-lg">${request.verified ? 'إلغاء التوثيق' : 'توثيق'}</button>
+                            <button data-id="${doc.id}" class="delete-btn bg-rose-600 text-white py-1 px-3 rounded-lg">حذف</button>
                         </div>
                     </div>
                 </div>
             `;
         };
-        
-        // **MODIFIED**: One listener for all requests
         const listenToRequests = () => {
-            const q = query(requestsCollection);
+            const q = query(requestsCollection, orderBy('createdAt', 'desc'));
             onSnapshot(q, (snapshot) => {
-                dashboard.innerHTML = snapshot.empty ? `<p class="text-center text-gray-500 bg-white p-6 rounded-lg shadow">لا توجد أي طلبات حالياً.</p>` : '';
-                snapshot.docs
-                    .sort((a, b) => b.data().createdAt?.toMillis() - a.data().createdAt?.toMillis())
-                    .forEach(doc => dashboard.innerHTML += createCardHTML(doc));
+                requestsDashboard.innerHTML = snapshot.empty ? `<p class="text-center text-gray-500 p-6">لا توجد طلبات.</p>` : '';
+                snapshot.docs.forEach(doc => requestsDashboard.innerHTML += createRequestCardHTML(doc));
             });
         };
-
-        // **MODIFIED**: Event listener to handle verification and deletion
-        adminDashboardContainer.addEventListener('click', async (e) => {
-            const button = e.target.closest('button');
-            if (!button) return;
-            
-            const docId = button.dataset.id;
-            if (!docId) return;
-
+        requestsDashboard.addEventListener('click', async (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            const docId = btn.dataset.id;
             const docRef = doc(db, 'donation_requests', docId);
-
-            if (button.classList.contains('verify-btn')) {
-                 const isVerified = button.dataset.verified === 'true';
-                 try { 
-                    // Toggle the 'verified' field
-                    await updateDoc(docRef, { verified: !isVerified }); 
-                 } catch (err) { console.error("Verification error: ", err); }
+            if (btn.classList.contains('verify-btn')) {
+                 await updateDoc(docRef, { verified: !(btn.dataset.verified === 'true') });
             }
-            if (button.classList.contains('delete-btn')) {
-                if (confirm('هل أنت متأكد من حذف هذا الطلب نهائياً؟')) {
-                    try { 
-                        await deleteDoc(docRef); 
-                    } catch (err) { console.error("Delete error: ", err); }
-                }
+            if (btn.classList.contains('delete-btn') && confirm('هل أنت متأكد من حذف هذا الطلب؟')) {
+                await deleteDoc(docRef);
+            }
+        });
+
+        // --- Centers Management Logic ---
+        const centersCollection = collection(db, 'donation_centers');
+        const listenToCenters = () => {
+            onSnapshot(query(centersCollection, orderBy('name')), (snapshot) => {
+                centersList.innerHTML = snapshot.empty ? `<p class="text-center text-gray-500 p-6">لا توجد مراكز مضافة.</p>` : '';
+                snapshot.docs.forEach(doc => {
+                    const center = doc.data();
+                    centersList.innerHTML += `
+                        <div class="bg-white p-3 rounded-lg shadow-sm flex justify-between items-center">
+                            <div>
+                                <p class="font-bold">${center.name}</p>
+                                <p class="text-sm text-gray-500">${center.wilaya}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button data-id="${doc.id}" data-name="${center.name}" data-wilaya="${center.wilaya}" class="edit-center-btn bg-gray-200 text-gray-700 py-1 px-3 rounded-lg text-sm">تعديل</button>
+                                <button data-id="${doc.id}" class="delete-center-btn bg-rose-500 text-white py-1 px-3 rounded-lg text-sm">حذف</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        };
+        centerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('center-id').value;
+            const data = { name: centerForm['center-name'].value, wilaya: centerForm['center-wilaya'].value };
+            if (id) { // Update existing
+                await updateDoc(doc(db, 'donation_centers', id), data);
+            } else { // Add new
+                await addDoc(centersCollection, data);
+            }
+            centerForm.reset();
+            document.getElementById('center-id').value = '';
+            centerSubmitBtn.textContent = 'إضافة مركز';
+            centerSubmitBtn.classList.replace('bg-blue-600', 'bg-teal-600');
+        });
+        centersList.addEventListener('click', async (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            const docId = btn.dataset.id;
+            if (btn.classList.contains('edit-center-btn')) {
+                document.getElementById('center-id').value = docId;
+                document.getElementById('center-name').value = btn.dataset.name;
+                document.getElementById('center-wilaya').value = btn.dataset.wilaya;
+                centerSubmitBtn.textContent = 'تحديث المركز';
+                centerSubmitBtn.classList.replace('bg-teal-600', 'bg-blue-600');
+                window.scrollTo(0, 0);
+            }
+            if (btn.classList.contains('delete-center-btn') && confirm('هل أنت متأكد من حذف هذا المركز؟')) {
+                await deleteDoc(doc(db, 'donation_centers', docId));
             }
         });
     </script>

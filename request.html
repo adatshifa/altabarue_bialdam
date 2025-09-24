@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تفاصيل طلب التبرع - أداة شفاء</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #f0fdfa; color: #1f2937; }
+        .custom-shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.07); }
+        .verified::after { content: '✅'; font-size: 1rem; margin-right: 8px; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/80 backdrop-blur-md custom-shadow-lg">
+        <div class="container mx-auto px-4 sm:px-6 py-3 flex justify-between items-center">
+            <a href="index.html" class="text-3xl font-extrabold text-teal-600">أداة شفاء</a>
+            <a href="index.html" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-5 rounded-full transition shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                <i class="fas fa-home mr-2"></i> العودة للرئيسية
+            </a>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 py-12 md:py-20">
+        <div id="request-details" class="bg-white max-w-3xl mx-auto rounded-2xl custom-shadow-lg p-6 md:p-10">
+            <p class="text-center text-gray-500 py-10">جاري تحميل تفاصيل الطلب...</p>
+        </div>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyBjGbfd-myjqLtqvdMp4b-h4LIaeZjfUto",
+          authDomain: "altabarue-bialdam.firebaseapp.com",
+          databaseURL: "https://altabarue-bialdam-default-rtdb.firebaseio.com",
+          projectId: "altabarue-bialdam",
+          storageBucket: "altabarue-bialdam.appspot.com",
+          messagingSenderId: "1032387539358",
+          appId: "1:1032387539358:web:229d33a9d5a0f522c9268f",
+          measurementId: "G-GQ6M7F21PZ"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const requestDetailsContainer = document.getElementById('request-details');
+
+        const displayRequestDetails = (requestData) => {
+            const request = requestData;
+            document.title = `طلب تبرع: ${request.bloodType} في ${request.hospital} - أداة شفاء`;
+            
+            const date = request.createdAt ? new Date(request.createdAt.seconds * 1000).toLocaleString('ar-EG', { dateStyle: 'full', timeStyle: 'short' }) : 'غير متوفر';
+            let urgencyText, urgencyClass;
+            if(request.urgency === 'urgent') { urgencyText = 'عاجل جداً'; urgencyClass = 'bg-rose-100 text-rose-800'; }
+            else if(request.urgency === 'soon') { urgencyText = 'قريب'; urgencyClass = 'bg-amber-100 text-amber-800'; }
+            else { urgencyText = 'غير مستعجل'; urgencyClass = 'bg-green-100 text-green-800'; }
+
+            requestDetailsContainer.innerHTML = `
+                <div class="flex flex-col sm:flex-row justify-between items-start gap-6 border-b pb-6 mb-6">
+                     <div>
+                        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 ${request.verified ? 'verified' : ''}">${request.hospital}</h1>
+                        <p class="text-lg text-gray-600 mt-1">${request.wilaya}, ${request.location}</p>
+                     </div>
+                     <div class="bg-rose-500 text-white font-bold text-4xl p-2 rounded-full w-24 h-24 flex items-center justify-center shadow-lg flex-shrink-0">${request.bloodType}</div>
+                </div>
+                
+                <div class="space-y-4 text-lg">
+                    <p class="flex items-center gap-3"><i class="fas fa-map-marker-alt text-gray-400 fa-fw"></i><strong class="font-semibold">الولاية:</strong> <span>${request.wilaya}</span></p>
+                    <p class="flex items-center gap-3"><i class="fas fa-location-arrow text-gray-400 fa-fw"></i><strong class="font-semibold">المكان:</strong> <span>${request.location}</span></p>
+                    <p class="flex items-center gap-3"><i class="fas fa-exclamation-circle text-gray-400 fa-fw"></i><strong class="font-semibold">الاستعجال:</strong> <span class="text-base font-semibold px-3 py-1 rounded-full ${urgencyClass}">${urgencyText}</span></p>
+                    <p class="flex items-center gap-3"><i class="fas fa-calendar-alt text-gray-400 fa-fw"></i><strong class="font-semibold">تاريخ النشر:</strong> <span>${date}</span></p>
+                </div>
+
+                <div class="mt-8 border-t pt-6 text-center">
+                    <p class="font-semibold text-xl mb-3">للتواصل والمساعدة</p>
+                    <a href="tel:${request.phone1}" class="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-10 rounded-lg transition text-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-1">
+                        <i class="fas fa-phone mr-3"></i> ${request.phone1}
+                    </a>
+                </div>
+            `;
+        };
+
+        const displayError = (message) => {
+            requestDetailsContainer.innerHTML = `<p class="text-center text-red-500 font-bold py-10 text-xl">${message}</p>`;
+        };
+
+        const fetchRequest = async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const requestId = urlParams.get('id');
+
+            if (!requestId) {
+                displayError('خطأ: لم يتم تحديد رقم الطلب.');
+                return;
+            }
+
+            try {
+                const docRef = doc(db, 'donation_requests', requestId);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    displayRequestDetails(docSnap.data());
+                } else {
+                    displayError('عذراً، هذا الطلب غير موجود أو تم حذفه.');
+                }
+            } catch (error) {
+                console.error("Error fetching document:", error);
+                displayError('حدث خطأ أثناء جلب البيانات.');
+            }
+        };
+
+        fetchRequest();
+    </script>
+</body>
+</html>
