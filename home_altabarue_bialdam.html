@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أداة شفاء | جاري التوجيه...</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background-color: #f0fdfa; /* Light Teal Background */
+            color: #1f2937; 
+            overflow: hidden; /* To prevent scrolling */
+        }
+        /* Animation for the pulsing heart */
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        .heart-pulse {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="flex flex-col items-center justify-center min-h-screen text-center p-6">
+
+        <i class="fas fa-heart-pulse text-5xl text-rose-500 heart-pulse mb-6"></i>
+
+        <div id="countdown" class="text-9xl font-black text-teal-600 tracking-tighter">5</div>
+        
+        <p class="text-xl font-semibold text-gray-700 mt-2">
+            جاري توجيهك إلى منصة إنقاذ الحياة
+        </p>
+
+    </div>
+
+    <footer class="absolute bottom-0 left-0 right-0 p-6">
+        <div class="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-6 text-gray-500 text-sm">
+            <span>توكل على الله</span>
+            <span class="hidden md:inline">•</span>
+            <span>استغفر الله</span>
+            <span class="hidden md:inline">•</span>
+            <span>صلِّ على محمد ﷺ</span>
+        </div>
+    </footer>
+    <script>
+        (function() {
+            var seconds = 5; // Countdown starts from 5
+            var countdownElement = document.getElementById('countdown');
+
+            var countdownInterval = setInterval(function() {
+                seconds--;
+                countdownElement.textContent = seconds;
+                if (seconds <= 0) {
+                    clearInterval(countdownInterval);
+                    // Redirect to your main page
+                    window.location.href = 'index.html'; 
+                }
+            }, 1000);
+        })();
+    </script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+

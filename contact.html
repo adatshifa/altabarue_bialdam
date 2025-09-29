@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تواصل معنا - أداة شفاء</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #f0fdfa; color: #1f2937; }
+        .custom-shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.07); }
+        .contact-link {
+            transition: all 0.3s ease;
+            transform: perspective(1000px) rotateY(0deg);
+        }
+        .contact-link:hover {
+            transform: perspective(1000px) rotateY(10deg);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/80 backdrop-blur-md custom-shadow-lg sticky top-0 z-40">
+        <div class="container mx-auto px-4 sm:px-6 py-3 flex justify-between items-center">
+            <a href="index.html" class="text-3xl font-extrabold text-teal-600">أداة شفاء</a>
+            <a href="index.html" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-5 rounded-full transition shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                <i class="fas fa-home mr-2"></i> العودة للرئيسية
+            </a>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 py-12">
+        <section class="text-center">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-gray-800 mb-4">تواصل معنا</h1>
+            <p class="text-lg text-gray-600 max-w-2xl mx-auto">نحن هنا للإجابة على استفساراتكم ومقترحاتكم. يمكنكم التواصل معنا عبر القنوات التالية:</p>
+        </section>
+
+        <section class="mt-12 max-w-4xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <a href="https://t.me/adatshifa" target="_blank" class="contact-link bg-white p-6 rounded-xl custom-shadow-lg flex items-center gap-5">
+                    <i class="fab fa-telegram text-5xl text-sky-500"></i>
+                    <div>
+                        <h3 class="text-2xl font-bold text-gray-800">تليجرام</h3>
+                        <p class="text-gray-600">انضم إلى قناتنا للحصول على آخر التحديثات.</p>
+                    </div>
+                </a>
+
+                <a href="https://wa.me/213000000000" target="_blank" class="contact-link bg-white p-6 rounded-xl custom-shadow-lg flex items-center gap-5">
+                    <i class="fab fa-whatsapp text-5xl text-green-500"></i>
+                    <div>
+                        <h3 class="text-2xl font-bold text-gray-800">واتساب</h3>
+                        <p class="text-gray-600">تواصل معنا مباشرة عبر واتساب.</p>
+                    </div>
+                </a>
+                
+                <a href="https://www.facebook.com/" target="_blank" class="contact-link bg-white p-6 rounded-xl custom-shadow-lg flex items-center gap-5">
+                    <i class="fab fa-facebook text-5xl text-blue-600"></i>
+                    <div>
+                        <h3 class="text-2xl font-bold text-gray-800">فيسبوك</h3>
+                        <p class="text-gray-600">تابع صفحتنا الرسمية.</p>
+                    </div>
+                </a>
+                
+                <a href="https://www.instagram.com/" target="_blank" class="contact-link bg-white p-6 rounded-xl custom-shadow-lg flex items-center gap-5">
+                    <i class="fab fa-instagram text-5xl text-pink-500"></i>
+                    <div>
+                        <h3 class="text-2xl font-bold text-gray-800">انستغرام</h3>
+                        <p class="text-gray-600">شاهد قصصنا وتبرعاتنا.</p>
+                    </div>
+                </a>
+
+                <a href="https://www.tiktok.com/" target="_blank" class="contact-link bg-white p-6 rounded-xl custom-shadow-lg flex items-center gap-5">
+                    <i class="fab fa-tiktok text-5xl text-black"></i>
+                    <div>
+                        <h3 class="text-2xl font-bold text-gray-800">تيك توك</h3>
+                        <p class="text-gray-600">تابع فيديوهاتنا التوعوية.</p>
+                    </div>
+                </a>
+                
+                <div class="contact-link bg-white p-6 rounded-xl custom-shadow-lg flex items-center gap-5">
+                    <i class="fas fa-phone-alt text-5xl text-gray-700"></i>
+                    <div>
+                        <h3 class="text-2xl font-bold text-gray-800">رقم الهاتف</h3>
+                        <p dir="ltr" class="text-gray-600 text-lg tracking-wider">+213 123 456 789</p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+</body>
+</html>

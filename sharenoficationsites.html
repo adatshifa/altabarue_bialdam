@@ -1,0 +1,222 @@
+<div id="shifa-notification-wrapper" style="font-family: 'Cairo', sans-serif;">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+        
+        #shifa-notification-container {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            z-index: 10000;
+        }
+
+        #shifa-notification-card {
+            background-color: #0d9488; /* Teal Color */
+            color: white;
+            margin: 16px;
+            padding: 24px;
+            border-radius: 16px;
+            max-width: 420px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            animation: shifa-slide-up 0.5s ease-out;
+            border-top: 4px solid #fde047; /* Yellow Accent */
+        }
+        @keyframes shifa-slide-up {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        #shifa-notification-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        #shifa-notification-title { font-size: 1.5rem; font-weight: 800; display: flex; align-items: center; gap: 12px; }
+        #shifa-notification-title .icon { font-style: normal; animation: shifa-pulse 1.5s infinite; }
+        @keyframes shifa-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+        #shifa-close-btn { background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; opacity: 0.8; transition: opacity 0.2s; }
+        #shifa-close-btn:hover { opacity: 1; }
+        #shifa-notification-body { font-size: 1.1rem; line-height: 1.6; margin-bottom: 20px; }
+        #shifa-notification-actions { display: flex; flex-direction: column; gap: 12px; }
+        
+        .shifa-action-btn {
+            padding: 12px; border-radius: 8px; text-decoration: none; text-align: center;
+            font-weight: 700; font-size: 1rem; transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer; border: none;
+        }
+        .shifa-action-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+        #shifa-donate-btn { background-color: #ffffff; color: #0d9488; }
+        #shifa-share-btn { background-color: #16a34a; color: white; }
+
+        /* Fallback Share Modal Styles */
+        #shifa-share-fallback-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: 10001;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: shifa-fade-in 0.3s;
+        }
+        @keyframes shifa-fade-in { from { opacity: 0; } to { opacity: 1; } }
+        
+        #shifa-share-fallback-content {
+            background-color: white;
+            color: #333;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 320px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        #shifa-share-fallback-content h4 { margin-top: 0; margin-bottom: 20px; font-size: 1.2rem; }
+        .shifa-fallback-link {
+            display: block;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            color: white;
+            transition: opacity 0.2s;
+        }
+        .shifa-fallback-link:hover { opacity: 0.9; }
+    </style>
+
+    <div id="shifa-notification-container">
+        <div id="shifa-notification-card">
+            <div id="shifa-notification-header">
+                <h3 id="shifa-notification-title"><i class="icon">🩸</i> نداء إنساني</h3>
+                <button id="shifa-close-btn" title="إغلاق">&times;</button>
+            </div>
+            <div id="shifa-notification-body">
+                <p>أيها الزائر الكريم، يناشدك أحدهم للتصدق بقطرة دم. إن وفقت فجزاؤك عند الله، وإن لم توفق فشارك المناشدة فالدال على الخير كفاعله.</p>
+            </div>
+            <div id="shifa-notification-actions">
+                <a href="https://adatshifa.github.io/altabarue_bialdam/index.html" target="_blank" id="shifa-donate-btn" class="shifa-action-btn">
+                    مشاهدة طلبات التبرع
+                </a>
+                <button id="shifa-share-btn" class="shifa-action-btn">
+                    شارك النداء
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="shifa-share-fallback-modal" style="display: none;">
+        <div id="shifa-share-fallback-content">
+            <h4>شارك النداء عبر:</h4>
+            <a href="#" class="shifa-fallback-link" id="shifa-fb-share" style="background-color: #1877F2;" target="_blank">فيسبوك</a>
+            <a href="#" class="shifa-fallback-link" id="shifa-tw-share" style="background-color: #1DA1F2;" target="_blank">تويتر</a>
+            <a href="#" class="shifa-fallback-link" id="shifa-wa-share" style="background-color: #25D366;" target="_blank">واتساب</a>
+            <button class="shifa-fallback-link" id="shifa-copy-link" style="background-color: #6b7280; border: none; width: 100%; font-size: 1rem;">نسخ الرابط</button>
+            <button id="shifa-close-fallback-btn" style="background: none; border: none; color: #9ca3af; cursor: pointer; margin-top: 15px; font-size: 0.9rem;">إغلاق</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    // Firebase SDK for connecting to the database
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // Same Firebase configuration as your main site
+    const firebaseConfig = {
+        apiKey: "AIzaSyBjGbfd-myjqLtqvdMp4b-h4LIaeZjfUto",
+        authDomain: "altabarue-bialdam.firebaseapp.com",
+        projectId: "altabarue-bialdam",
+        storageBucket: "altabarue-bialdam.appspot.com",
+        messagingSenderId: "1032387539358",
+        appId: "1:1032387539358:web:229d33a9d5a0f522c9268f",
+    };
+
+    try {
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        // --- Elements ---
+        const notificationContainer = document.getElementById('shifa-notification-container');
+        const closeBtn = document.getElementById('shifa-close-btn');
+        const shareBtn = document.getElementById('shifa-share-btn');
+        const fallbackModal = document.getElementById('shifa-share-fallback-modal');
+        const closeFallbackBtn = document.getElementById('shifa-close-fallback-btn');
+
+        // --- Notification Logic ---
+        const showNotification = () => { notificationContainer.style.display = 'block'; };
+        const hideNotification = () => {
+            notificationContainer.style.display = 'none';
+            localStorage.setItem('shifaNotificationClosed', Date.now());
+        };
+        closeBtn.addEventListener('click', hideNotification);
+
+        // --- Advanced Share Logic ---
+        const shareURL = 'https://adatshifa.github.io/altabarue_bialdam/index.html';
+        const shareText = 'هناك حاجة ماسة للتبرع بالدم، كن سبباً في إنقاذ حياة. شاهد الطلبات وساهم.';
+        const shareData = {
+            title: 'نداء للتبرع بالدم',
+            text: shareText,
+            url: shareURL,
+        };
+
+        shareBtn.addEventListener('click', async () => {
+            if (navigator.share) { // Use Web Share API if available
+                try {
+                    await navigator.share(shareData);
+                } catch (err) {
+                    console.error("Share failed:", err);
+                }
+            } else { // Fallback for desktop/unsupported browsers
+                // Populate fallback links
+                const encodedUrl = encodeURIComponent(shareURL);
+                const encodedText = encodeURIComponent(shareText);
+                document.getElementById('shifa-fb-share').href = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
+                document.getElementById('shifa-tw-share').href = `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedText}`;
+                document.getElementById('shifa-wa-share').href = `https://api.whatsapp.com/send?text=${encodedText}%20${encodedUrl}`;
+                fallbackModal.style.display = 'flex';
+            }
+        });
+        
+        // --- Fallback Modal Logic ---
+        const copyLinkBtn = document.getElementById('shifa-copy-link');
+        copyLinkBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(shareURL).then(() => {
+                copyLinkBtn.textContent = 'تم النسخ!';
+                setTimeout(() => { copyLinkBtn.textContent = 'نسخ الرابط'; }, 2000);
+            });
+        });
+        const hideFallbackModal = () => { fallbackModal.style.display = 'none'; };
+        closeFallbackBtn.addEventListener('click', hideFallbackModal);
+        fallbackModal.addEventListener('click', (e) => { // Close when clicking outside the content
+             if (e.target === fallbackModal) { hideFallbackModal(); }
+        });
+
+        // --- Firebase Listener ---
+        const listenForRequests = () => {
+            const requestsCollection = collection(db, 'donation_requests');
+            const q = query(requestsCollection, orderBy('createdAt', 'desc'), limit(1));
+
+            onSnapshot(q, (snapshot) => {
+                if (snapshot.empty) return;
+
+                const latestRequestId = snapshot.docs[0].id;
+                const lastShownId = localStorage.getItem('shifaLastShownId');
+                const notificationClosedTime = localStorage.getItem('shifaNotificationClosed');
+
+                const oneHour = 60 * 60 * 1000;
+                if (notificationClosedTime && (Date.now() - notificationClosedTime < oneHour)) {
+                    return; // Don't show if user closed it recently
+                }
+
+                if (latestRequestId !== lastShownId) {
+                    showNotification();
+                    localStorage.setItem('shifaLastShownId', latestRequestId);
+                }
+            }, (error) => console.error("Shifa Notification Error: ", error));
+        };
+
+        listenForRequests();
+
+    } catch (e) {
+        console.error("Could not initialize Shifa Notification script.", e);
+    }
+</script>

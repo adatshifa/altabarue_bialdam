@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أريد التبرع - أداة شفاء</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #f0fdfa; color: #1f2937; }
+        .custom-shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.07); }
+        .quiz-option { transition: all 0.2s ease-in-out; }
+        .quiz-option:hover { transform: translateY(-5px); }
+        .quiz-option.selected { background-color: #0d9488; color: white; }
+        .urgent { border-right: 5px solid #f43f5e; }
+        .verified::after { content: '✅'; font-size: 1rem; margin-right: 8px; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/80 backdrop-blur-md custom-shadow-lg sticky top-0 z-40">
+        <div class="container mx-auto px-4 sm:px-6 py-3 flex justify-between items-center">
+            <a href="index.html" class="text-3xl font-extrabold text-teal-600">أداة شفاء</a>
+            <a href="index.html" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-5 rounded-full transition shadow-md">
+                <i class="fas fa-home mr-2"></i> العودة للرئيسية
+            </a>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 py-12">
+        <div id="quiz-container" class="max-w-2xl mx-auto bg-white p-8 rounded-2xl custom-shadow-lg">
+            <h1 class="text-3xl font-bold text-center mb-2 text-gray-800">اختبار أهلية التبرع بالدم</h1>
+            <p class="text-center text-gray-500 mb-8">أجب على الأسئلة التالية للتأكد من إمكانية تبرعك.</p>
+            
+            <div id="quiz-question-container">
+                </div>
+
+            <div id="quiz-result" class="hidden text-center">
+                </div>
+        </div>
+
+        <div id="location-requests-container" class="hidden mt-12">
+             <div class="max-w-2xl mx-auto text-center">
+                 <h2 class="text-3xl font-bold text-gray-800">أنت بطل!</h2>
+                 <p class="text-lg mt-2 text-gray-600">شكرًا لاستعدادك للمساعدة. يرجى تحديد ولايتك لعرض الحالات القريبة منك.</p>
+                 <div class="mt-6 flex flex-col sm:flex-row gap-4 justify-center">
+                      <select id="wilaya" class="w-full sm:w-80 px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white" required>
+                            <option value="" disabled selected>اختر ولايتك</option>
+                      </select>
+                      <a href="centers.html" class="w-full sm:w-auto bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 px-6 rounded-lg transition text-lg flex items-center justify-center">
+                          <i class="fas fa-hospital mr-2"></i> عرض أماكن التبرع
+                      </a>
+                 </div>
+            </div>
+            <div id="requests-dashboard" class="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 <p id="no-requests-message" class="text-center text-gray-500 p-10 bg-white rounded-xl custom-shadow-lg md:col-span-3">اختر ولاية لعرض الحالات...</p>
+            </div>
+        </div>
+    </main>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyBjGbfd-myjqLtqvdMp4b-h4LIaeZjfUto",
+          authDomain: "altabarue-bialdam.firebaseapp.com",
+          databaseURL: "https://altabarue-bialdam-default-rtdb.firebaseio.com",
+          projectId: "altabarue-bialdam",
+          storageBucket: "altabarue-bialdam.appspot.com",
+          messagingSenderId: "1032387539358",
+          appId: "1:1032387539358:web:229d33a9d5a0f522c9268f",
+          measurementId: "G-GQ6M7F21PZ"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        const quizContainer = document.getElementById('quiz-container');
+        const questionContainer = document.getElementById('quiz-question-container');
+        const quizResult = document.getElementById('quiz-result');
+        const locationRequestsContainer = document.getElementById('location-requests-container');
+        const requestsDashboard = document.getElementById('requests-dashboard');
+        const noRequestsMessage = document.getElementById('no-requests-message');
+        const wilayaSelect = document.getElementById('wilaya');
+
+        const questions = [
+            { text: "هل عمرك بين 18 و 65 سنة؟", requiredAnswer: true },
+            { text: "هل وزنك 50 كجم أو أكثر؟", requiredAnswer: true },
+            { text: "هل تتمتع بصحة جيدة ولا تعاني من أي أمراض مزمنة؟", requiredAnswer: true },
+            { text: "هل مرّ على آخر تبرع لك بالدم 3 أشهر على الأقل؟", requiredAnswer: true },
+            { text: "هل أجريت أي عملية جراحية كبيرة خلال الـ 6 أشهر الماضية؟", requiredAnswer: false },
+        ];
+        let currentQuestionIndex = 0;
+
+        function showQuestion(index) {
+            const question = questions[index];
+            questionContainer.innerHTML = `
+                <p class="text-xl font-semibold text-center mb-6">${question.text}</p>
+                <div class="flex justify-center gap-4">
+                    <button class="quiz-option w-32 bg-gray-100 font-bold py-3 px-6 rounded-lg" onclick="handleAnswer(true)">نعم</button>
+                    <button class="quiz-option w-32 bg-gray-100 font-bold py-3 px-6 rounded-lg" onclick="handleAnswer(false)">لا</button>
+                </div>
+            `;
+        }
+
+        window.handleAnswer = (answer) => {
+            const question = questions[currentQuestionIndex];
+            if (answer !== question.requiredAnswer) {
+                showResult(false);
+                return;
+            }
+
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                showQuestion(currentQuestionIndex);
+            } else {
+                showResult(true);
+            }
+        };
+        
+        function showResult(isEligible) {
+            questionContainer.classList.add('hidden');
+            quizResult.classList.remove('hidden');
+            if (isEligible) {
+                quizResult.innerHTML = `<h2 class="text-2xl font-bold text-green-600 mb-4">تهانينا! أنت مؤهل للتبرع.</h2>`;
+                setTimeout(() => {
+                    quizContainer.classList.add('hidden');
+                    locationRequestsContainer.classList.remove('hidden');
+                }, 1500);
+            } else {
+                quizResult.innerHTML = `
+                    <h2 class="text-2xl font-bold text-rose-600 mb-4">نأسف، يبدو أنك غير مؤهل حالياً.</h2>
+                    <p class="text-gray-600">شكرًا لاهتمامك. قد تكون هناك أسباب مؤقتة تمنعك من التبرع. يمكنك استشارة طبيب أو مركز تبرع لمزيد من المعلومات.</p>
+                `;
+            }
+        }
+        
+        const algerianWilayas = ["أدرار", "الشلف", "الأغواط", "أم البواقي", "باتنة", "بجاية", "بسكرة", "بشار", "البليدة", "البويرة","تمنراست", "تبسة", "تلمسان", "تيارت", "تيزي وزو", "الجزائر", "الجلفة", "جيجل", "سطيف", "سعيدة","سكيكدة", "سيدي بلعباس", "عنابة", "قالمة", "قسنطينة", "المدية", "مستغانم", "المسيلة", "معسكر", "ورقلة","وهران", "البيض", "إليزي", "برج بوعريريج", "بومرداس", "الطارف", "تندوف", "تيسمسيلت", "الوادي", "خنشلة","سوق أهراس", "تيبازة", "ميلة", "عين الدفلى", "النعامة", "عين تموشنت", "غرداية", "غليزان", "تيميمون","برج باجي مختار", "أولاد جلال", "بني عباس", "عين صالح", "عين قزام", "تقرت", "جانت", "المغير", "المنيعة"];
+        algerianWilayas.forEach(w => { wilayaSelect.innerHTML += `<option value="${w}">${w}</option>`; });
+        
+        wilayaSelect.addEventListener('change', () => {
+            const selectedWilaya = wilayaSelect.value;
+            if (selectedWilaya) {
+                fetchRequestsByWilaya(selectedWilaya);
+            }
+        });
+
+        const fetchRequestsByWilaya = (wilaya) => {
+            const q = query(
+                collection(db, 'donation_requests'), 
+                where('wilaya', '==', wilaya),
+                orderBy('createdAt', 'desc'),
+                limit(6)
+            );
+            onSnapshot(q, (snapshot) => {
+                requestsDashboard.innerHTML = '';
+                if (snapshot.empty) {
+                    noRequestsMessage.classList.remove('hidden');
+                    requestsDashboard.appendChild(noRequestsMessage);
+                    noRequestsMessage.textContent = `لا توجد حالات مسجلة حالياً في ولاية ${wilaya}.`;
+                    return;
+                }
+                noRequestsMessage.classList.add('hidden');
+                snapshot.docs.forEach(doc => {
+                    requestsDashboard.innerHTML += createCardHTML(doc);
+                });
+            });
+        };
+
+         const createCardHTML = (doc) => {
+            const request = doc.data();
+            const date = request.createdAt ? new Date(request.createdAt.seconds * 1000).toLocaleDateString('en-GB') : 'غير متوفر';
+            return `
+                <div class="bg-white p-5 rounded-xl custom-shadow-lg transition duration-300 transform hover:-translate-y-1 ${request.urgency}">
+                    <div class="flex justify-between items-start gap-4">
+                         <div>
+                            <h3 class="text-xl font-bold text-gray-800 ${request.verified ? 'verified' : ''}">${request.hospital}</h3>
+                            <p class="text-gray-600">${request.wilaya}, ${request.location}</p>
+                         </div>
+                         <div class="bg-rose-500 text-white font-bold text-2xl p-2 rounded-full w-16 h-16 flex items-center justify-center shadow-lg flex-shrink-0">${request.bloodType}</div>
+                    </div>
+                    <div class="my-4 border-t pt-4">
+                        <p class="flex items-center gap-2 text-lg" dir="ltr"><i class="fas fa-phone text-gray-400"></i><a href="tel:${request.phone1}" class="text-blue-600 hover:underline tracking-wider">${request.phone1}</a></p>
+                    </div>
+                    <div class="flex justify-between items-center text-sm text-gray-500 pt-3 border-t">
+                         <p class="flex items-center gap-2"><i class="fas fa-calendar-alt"></i><span>${date}</span></p>
+                         <a href="request.html?id=${doc.id}" class="bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold py-1 px-3 rounded-lg transition text-xs">
+                            <i class="fas fa-eye"></i> عرض
+                         </a>
+                    </div>
+                </div>
+            `;
+        };
+
+        showQuestion(currentQuestionIndex);
+    </script>
+</body>
+</html>

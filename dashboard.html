@@ -74,7 +74,6 @@
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, query, doc, deleteDoc, updateDoc, addDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase config
         const firebaseConfig = {
           apiKey: "AIzaSyBjGbfd-myjqLtqvdMp4b-h4LIaeZjfUto",
           authDomain: "altabarue-bialdam.firebaseapp.com",
@@ -89,24 +88,20 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // --- DOM Elements ---
         const loginSection = document.getElementById('admin-login-section');
         const dashboardContainer = document.getElementById('admin-dashboard-container');
         const logoutButton = document.getElementById('logout-button');
         const loginForm = document.getElementById('login-form');
         const loginError = document.getElementById('login-error');
         const requestsDashboard = document.getElementById('requests-dashboard');
-        // Tabs
         const tabRequests = document.getElementById('tab-requests');
         const tabCenters = document.getElementById('tab-centers');
         const requestsPanel = document.getElementById('requests-panel');
         const centersPanel = document.getElementById('centers-panel');
-        // Centers Management
         const centerForm = document.getElementById('center-form');
         const centersList = document.getElementById('centers-list');
         const centerSubmitBtn = document.getElementById('center-submit-btn');
 
-        // --- Auth Logic ---
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 loginSection.classList.add('hidden');
@@ -127,7 +122,6 @@
         });
         logoutButton.addEventListener('click', () => signOut(auth));
 
-        // --- Tab Navigation Logic ---
         tabRequests.addEventListener('click', () => {
             requestsPanel.classList.remove('hidden');
             centersPanel.classList.add('hidden');
@@ -141,30 +135,37 @@
             tabRequests.classList.remove('tab-active');
         });
 
-        // --- Requests Management Logic ---
         const requestsCollection = collection(db, 'donation_requests');
         const createRequestCardHTML = (doc) => {
             const request = doc.data();
-            const date = request.createdAt ? new Date(request.createdAt.seconds * 1000).toLocaleString('ar-EG-u-nu-latn') : 'غير متوفر';
-            // MODIFIED: Show reports count
-            const reportsHTML = request.reports > 0 
-                ? `<p class="text-orange-600 font-bold flex items-center gap-2"><i class="fas fa-flag"></i> بلاغات: ${request.reports}</p>` 
-                : '';
+            const date = request.createdAt ? new Date(request.createdAt.seconds * 1000).toLocaleString('ar-DZ') : 'غير متوفر';
             const detailsHTML = request.details ? `<blockquote class="mt-2 p-2 bg-gray-50 border-r-4">${request.details}</blockquote>` : '';
+
+            // NEW: Display reports and their reasons
+            const reportsCount = request.reports || 0;
+            const reportReasons = request.reportReasons || [];
+            const reportsHTML = reportsCount > 0 
+                ? `<div class="mt-3 p-3 bg-amber-50 border-l-4 border-amber-400">
+                     <p class="text-amber-800 font-bold flex items-center gap-2"><i class="fas fa-flag"></i> تم الإبلاغ عنه ${reportsCount} ${reportsCount > 1 ? 'مرات' : 'مرة'}</p>
+                     <ul class="list-disc list-inside text-sm text-amber-700 mt-2 space-y-1">
+                        ${reportReasons.map(reason => `<li>${escapeHTML(reason)}</li>`).join('')}
+                     </ul>
+                   </div>` 
+                : '';
 
             return `
                 <div class="bg-white p-4 rounded-xl shadow-md border-r-4 ${request.verified ? 'border-green-500' : 'border-gray-300'}">
                     <div class="flex flex-wrap justify-between items-start gap-2 mb-3">
                          <div>
-                            <h3 class="text-lg font-bold">${request.hospital} (${request.wilaya})</h3>
-                            <p class="text-gray-600">${request.phone1}</p>
+                            <h3 class="text-lg font-bold">${escapeHTML(request.hospital)} (${escapeHTML(request.wilaya)})</h3>
+                            <p class="text-gray-600" dir="ltr">${escapeHTML(request.phone1)}</p>
                          </div>
                          <div class="flex items-center gap-4">
-                            ${reportsHTML}
-                            <span class="font-bold text-rose-600 text-lg">${request.bloodType}</span>
+                            <span class="font-bold text-rose-600 text-lg">${escapeHTML(request.bloodType)}</span>
                          </div>
                     </div>
                     ${detailsHTML}
+                    ${reportsHTML}
                     <div class="flex justify-between items-center text-sm text-gray-500 mt-3 border-t pt-3">
                          <p>أضيف في: ${date}</p>
                         <div class="flex items-center gap-2">
@@ -175,6 +176,10 @@
                 </div>
             `;
         };
+        
+        // Helper to prevent XSS attacks
+        const escapeHTML = str => str ? str.replace(/[&<>"']/g, match => ({'&': '&amp;','<': '&lt;','>': '&gt;','"': '&quot;',"'": '&#39;'})[match]) : '';
+
         const listenToRequests = () => {
             const q = query(requestsCollection, orderBy('createdAt', 'desc'));
             onSnapshot(q, (snapshot) => {
@@ -195,7 +200,6 @@
             }
         });
 
-        // --- Centers Management Logic ---
         const centersCollection = collection(db, 'donation_centers');
         const listenToCenters = () => {
             onSnapshot(query(centersCollection, orderBy('name')), (snapshot) => {
@@ -205,8 +209,8 @@
                     centersList.innerHTML += `
                         <div class="bg-white p-3 rounded-lg shadow-sm flex justify-between items-center">
                             <div>
-                                <p class="font-bold">${center.name}</p>
-                                <p class="text-sm text-gray-500">${center.wilaya}</p>
+                                <p class="font-bold">${escapeHTML(center.name)}</p>
+                                <p class="text-sm text-gray-500">${escapeHTML(center.wilaya)}</p>
                             </div>
                             <div class="flex gap-2">
                                 <button data-id="${doc.id}" data-name="${center.name}" data-wilaya="${center.wilaya}" class="edit-center-btn bg-gray-200 text-gray-700 py-1 px-3 rounded-lg text-sm">تعديل</button>
@@ -221,9 +225,9 @@
             e.preventDefault();
             const id = document.getElementById('center-id').value;
             const data = { name: centerForm['center-name'].value, wilaya: centerForm['center-wilaya'].value };
-            if (id) { // Update existing
+            if (id) {
                 await updateDoc(doc(db, 'donation_centers', id), data);
-            } else { // Add new
+            } else {
                 await addDoc(centersCollection, data);
             }
             centerForm.reset();

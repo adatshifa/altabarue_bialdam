@@ -3,36 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تفاصيل طلب التبرع - أداة شفاء</title>
+    <title>كل طلبات التبرع - أداة شفاء</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display.swap" rel="stylesheet">
     <style>
         body { font-family: 'Cairo', sans-serif; background-color: #f0fdfa; color: #1f2937; }
-        .custom-shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.07); }
+        .urgent { border-right: 5px solid #f43f5e; }
+        .soon { border-right: 5px solid #f59e0b; }
+        .later { border-right: 5px solid #10b981; }
         .verified::after { content: '✅'; font-size: 1rem; margin-right: 8px; }
+        .custom-shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.07); }
+        .modal-content { animation: scaleIn 0.3s ease-out; }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        .new-request-highlight { animation: highlight-fade 5s ease-out; }
+        @keyframes highlight-fade {
+            0% { background-color: rgba(16, 185, 129, 0.2); }
+            100% { background-color: transparent; }
+        }
     </style>
 </head>
 <body class="antialiased">
 
-    <header class="bg-white/80 backdrop-blur-md custom-shadow-lg">
+    <div id="sound-activation-modal" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center z-[10000]">
+        <div class="modal-content bg-gray-800 rounded-2xl shadow-2xl p-8 text-center max-w-lg w-full border-t-4 border-teal-500">
+            <i class="fas fa-volume-up text-6xl text-teal-400 mb-5"></i>
+            <h2 class="text-3xl font-extrabold text-white mb-4">تفعيل الإشعارات الصوتية</h2>
+            <p class="text-gray-300 mb-8">لضمان عدم تفويت أي طلب تبرع عاجل، نوصي بتفعيل الصوت.</p>
+            <button id="activate-sound-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold text-xl py-3 px-10 rounded-lg transition-transform transform hover:scale-105">
+                <i class="fas fa-check-circle mr-2"></i> نعم، قم بالتفعيل
+            </button>
+        </div>
+    </div>
+    <div id="new-request-alert-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-[9999]">
+        <div class="modal-content bg-red-800 rounded-2xl shadow-2xl p-6 md:p-8 text-center max-w-lg w-full border-t-4 border-yellow-300">
+            <i class="fas fa-bell text-5xl md:text-6xl text-yellow-300 animate-bounce mb-5"></i>
+            <h2 class="text-3xl md:text-4xl font-extrabold text-white mb-4">حالة عاجلة جديدة!</h2>
+            <div id="modal-request-details" class="bg-red-900/50 p-4 rounded-lg mb-8 text-right space-y-3"></div>
+            <button id="modal-confirm-btn" class="bg-yellow-400 hover:bg-yellow-500 text-red-900 font-bold text-lg md:text-xl py-3 px-10 rounded-lg transition-transform transform hover:scale-105">
+                <i class="fas fa-check-circle mr-2"></i> حسناً
+            </button>
+        </div>
+    </div>
+    <audio id="notification-sound" src="alerta.mp3" preload="auto" loop></audio>
+
+
+    <header class="bg-white/80 backdrop-blur-md custom-shadow-lg sticky top-0 z-40">
         <div class="container mx-auto px-4 sm:px-6 py-3 flex justify-between items-center">
             <a href="index.html" class="text-3xl font-extrabold text-teal-600">أداة شفاء</a>
-            <a href="index.html" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-5 rounded-full transition shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
-                <i class="fas fa-home mr-2"></i> العودة للرئيسية
-            </a>
+            <div class="flex items-center gap-2">
+                 <button id="mute-btn" title="كتم صوت الإشعارات" class="text-gray-500 hover:text-gray-800 transition-colors w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100">
+                    <i id="mute-icon" class="fas fa-volume-up"></i>
+                </button>
+                <a href="index.html" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-5 rounded-full transition shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                    <i class="fas fa-home mr-2"></i> العودة للرئيسية
+                </a>
+            </div>
         </div>
     </header>
 
-    <main class="container mx-auto px-4 sm:px-6 py-12 md:py-20">
-        <div id="request-details" class="bg-white max-w-3xl mx-auto rounded-2xl custom-shadow-lg p-6 md:p-10">
-            <p class="text-center text-gray-500 py-10">جاري تحميل تفاصيل الطلب...</p>
-        </div>
-    </main>
+    <main class="container mx-auto px-4 sm:px-6 py-12">
+        <section>
+            <h1 class="text-3xl md:text-4xl font-bold mb-4 text-center text-gray-800">تصفح جميع الحالات</h1>
+            <p class="text-center text-gray-500 mb-8 max-w-2xl mx-auto">استخدم أدوات الفرز والبحث للعثور على حالات التبرع بالدم حسب الولاية أو مدى الاستعجال.</p>
 
+            <div class="bg-white p-4 rounded-xl custom-shadow-lg mb-8 flex flex-col md:flex-row gap-4 items-center sticky top-20 z-30">
+                <div class="w-full">
+                    <input type="search" id="search-input" placeholder="🔍 ابحث باسم المستشفى أو الولاية..." class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 bg-gray-50">
+                </div>
+                <div class="w-full md:w-1/2 flex flex-col sm:flex-row gap-4">
+                     <select id="sort-order" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white">
+                        <option value="desc">الأحدث أولاً</option>
+                        <option value="asc">الأقدم أولاً</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="dashboard" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 </div>
+        </section>
+    </main>
+    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyBjGbfd-myjqLtqvdMp4b-h4LIaeZjfUto",
@@ -47,72 +101,131 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        const requestDetailsContainer = document.getElementById('request-details');
+        // --- START: NOTIFICATION SYSTEM LOGIC (Copied from index.html) ---
+        let newRequestCount = 0;
+        let originalTitle = document.title;
+        let titleInterval = null;
+        const audioManager = {
+            element: document.getElementById('notification-sound'),
+            isMuted: false,
+            isUnlocked: false,
+            unlock() { if (!this.isUnlocked) { this.element.play().then(() => this.element.pause()).catch(e => {}); this.isUnlocked = true; } },
+            play() { if (!this.isMuted && this.isUnlocked) { this.element.loop = true; this.element.play().catch(e => console.error("Audio play failed:", e)); } },
+            stop() { this.element.pause(); this.element.currentTime = 0; },
+            toggleMute() { this.isMuted = !this.isMuted; document.getElementById('mute-icon').className = this.isMuted ? 'fas fa-volume-mute text-red-500' : 'fas fa-volume-up'; document.getElementById('mute-btn').title = this.isMuted ? 'تشغيل' : 'كتم'; if (this.isMuted) this.stop(); }
+        };
+        function setupSoundActivation() {
+            const soundModal = document.getElementById('sound-activation-modal');
+            if (localStorage.getItem('soundActivated') === 'true') { audioManager.isUnlocked = true; return; }
+            soundModal.classList.remove('hidden');
+            document.getElementById('activate-sound-btn').onclick = () => { audioManager.unlock(); localStorage.setItem('soundActivated', 'true'); soundModal.classList.add('hidden'); };
+        }
+        function flashTitle() { if (newRequestCount > 0) { document.title = document.title === originalTitle ? `(${newRequestCount}) حالة جديدة!` : originalTitle; } else { clearInterval(titleInterval); titleInterval = null; document.title = originalTitle; } }
+        window.onfocus = () => { newRequestCount = 0; flashTitle(); };
+        function showNewRequestAlert(request) {
+            document.getElementById('modal-request-details').innerHTML = `<div class="flex justify-between items-center text-lg"><span class="text-gray-200">المستشفى:</span><span class="font-bold text-white">${request.hospital}</span></div><div class="flex justify-between items-center text-lg"><span class="text-gray-200">الولاية:</span><span class="font-bold text-white">${request.wilaya}</span></div><div class="flex justify-between items-center text-2xl mt-2 pt-2 border-t border-red-700"><span class="text-gray-200">الفصيلة:</span><span class="font-extrabold text-yellow-300">${request.bloodType}</span></div>`;
+            document.getElementById('new-request-alert-modal').classList.remove('hidden');
+            audioManager.play();
+            newRequestCount++;
+            if (!titleInterval) { titleInterval = setInterval(flashTitle, 1000); }
+        }
+        function hideNewRequestAlert() { document.getElementById('new-request-alert-modal').classList.add('hidden'); audioManager.stop(); }
+        document.getElementById('modal-confirm-btn').onclick = hideNewRequestAlert;
+        document.getElementById('mute-btn').onclick = () => audioManager.toggleMute();
+        // --- END: NOTIFICATION SYSTEM LOGIC ---
+        
+        const dashboard = document.getElementById('dashboard');
+        const searchInput = document.getElementById('search-input');
+        const sortOrderSelect = document.getElementById('sort-order');
+        
+        let allRequests = [];
+        let isInitialRequestsPageLoad = true;
+        let knownRequestIdsOnPage = new Set();
 
-        const displayRequestDetails = (requestData) => {
-            const request = requestData;
-            document.title = `طلب تبرع: ${request.bloodType} في ${request.hospital} - أداة شفاء`;
-            
-            const date = request.createdAt ? new Date(request.createdAt.seconds * 1000).toLocaleString('ar-EG', { dateStyle: 'full', timeStyle: 'short' }) : 'غير متوفر';
+
+        const createCardHTML = (doc) => {
+            const request = doc.data();
+            const isNew = !knownRequestIdsOnPage.has(doc.id) && !isInitialRequestsPageLoad;
+            const date = request.createdAt ? new Date(request.createdAt.seconds * 1000).toLocaleDateString('en-GB') : 'غير متوفر';
             let urgencyText, urgencyClass;
             if(request.urgency === 'urgent') { urgencyText = 'عاجل جداً'; urgencyClass = 'bg-rose-100 text-rose-800'; }
             else if(request.urgency === 'soon') { urgencyText = 'قريب'; urgencyClass = 'bg-amber-100 text-amber-800'; }
             else { urgencyText = 'غير مستعجل'; urgencyClass = 'bg-green-100 text-green-800'; }
 
-            requestDetailsContainer.innerHTML = `
-                <div class="flex flex-col sm:flex-row justify-between items-start gap-6 border-b pb-6 mb-6">
-                     <div>
-                        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 ${request.verified ? 'verified' : ''}">${request.hospital}</h1>
-                        <p class="text-lg text-gray-600 mt-1">${request.wilaya}, ${request.location}</p>
-                     </div>
-                     <div class="bg-rose-500 text-white font-bold text-4xl p-2 rounded-full w-24 h-24 flex items-center justify-center shadow-lg flex-shrink-0">${request.bloodType}</div>
-                </div>
-                
-                <div class="space-y-4 text-lg">
-                    <p class="flex items-center gap-3"><i class="fas fa-map-marker-alt text-gray-400 fa-fw"></i><strong class="font-semibold">الولاية:</strong> <span>${request.wilaya}</span></p>
-                    <p class="flex items-center gap-3"><i class="fas fa-location-arrow text-gray-400 fa-fw"></i><strong class="font-semibold">المكان:</strong> <span>${request.location}</span></p>
-                    <p class="flex items-center gap-3"><i class="fas fa-exclamation-circle text-gray-400 fa-fw"></i><strong class="font-semibold">الاستعجال:</strong> <span class="text-base font-semibold px-3 py-1 rounded-full ${urgencyClass}">${urgencyText}</span></p>
-                    <p class="flex items-center gap-3"><i class="fas fa-calendar-alt text-gray-400 fa-fw"></i><strong class="font-semibold">تاريخ النشر:</strong> <span>${date}</span></p>
-                </div>
-
-                <div class="mt-8 border-t pt-6 text-center">
-                    <p class="font-semibold text-xl mb-3">للتواصل والمساعدة</p>
-                    <a href="tel:${request.phone1}" class="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-10 rounded-lg transition text-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-1">
-                        <i class="fas fa-phone mr-3"></i> ${request.phone1}
-                    </a>
+            return `
+                <div class="bg-white p-5 rounded-xl custom-shadow-lg transition duration-300 transform hover:-translate-y-1 ${request.urgency} ${isNew ? 'new-request-highlight' : ''}">
+                    <div class="flex justify-between items-start gap-4">
+                         <div>
+                            <h3 class="text-xl font-bold text-gray-800 ${request.verified ? 'verified' : ''}">${request.hospital}</h3>
+                            <p class="text-gray-600">${request.wilaya}, ${request.location}</p>
+                         </div>
+                         <div class="bg-rose-500 text-white font-bold text-2xl p-2 rounded-full w-16 h-16 flex items-center justify-center shadow-lg flex-shrink-0">${request.bloodType}</div>
+                    </div>
+                    <div class="my-4 border-t pt-4 space-y-3">
+                        <p class="flex items-center gap-2" dir="ltr"><i class="fas fa-phone text-gray-400"></i><strong class="font-semibold">الهاتف:</strong> <a href="tel:${request.phone1}" class="text-blue-600 hover:underline tracking-wider">${request.phone1}</a></p>
+                        <p class="flex items-center gap-2"><i class="fas fa-exclamation-circle text-gray-400"></i><strong class="font-semibold">الاستعجال:</strong> <span class="text-sm font-semibold px-3 py-1 rounded-full ${urgencyClass}">${urgencyText}</span></p>
+                    </div>
+                    <div class="flex justify-between items-center text-sm text-gray-500 pt-3 border-t">
+                         <p class="flex items-center gap-2"><i class="fas fa-calendar-alt"></i><span>أضيف بتاريخ: ${date}</span></p>
+                         <a href="request.html?id=${doc.id}" class="bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold py-1 px-3 rounded-lg transition text-xs">
+                            <i class="fas fa-eye"></i> عرض التفاصيل
+                         </a>
+                    </div>
                 </div>
             `;
         };
 
-        const displayError = (message) => {
-            requestDetailsContainer.innerHTML = `<p class="text-center text-red-500 font-bold py-10 text-xl">${message}</p>`;
-        };
-
-        const fetchRequest = async () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const requestId = urlParams.get('id');
-
-            if (!requestId) {
-                displayError('خطأ: لم يتم تحديد رقم الطلب.');
+        const renderRequests = (requests) => {
+            dashboard.innerHTML = '';
+            if (requests.length === 0) {
+                dashboard.innerHTML = `<div class="text-center p-10 bg-white rounded-xl custom-shadow-lg md:col-span-2 lg:col-span-3"><p class="text-gray-500 text-xl">لا توجد نتائج تطابق بحثك.</p></div>`;
                 return;
             }
-
-            try {
-                const docRef = doc(db, 'donation_requests', requestId);
-                const docSnap = await getDoc(docRef);
-
-                if (docSnap.exists()) {
-                    displayRequestDetails(docSnap.data());
-                } else {
-                    displayError('عذراً، هذا الطلب غير موجود أو تم حذفه.');
-                }
-            } catch (error) {
-                console.error("Error fetching document:", error);
-                displayError('حدث خطأ أثناء جلب البيانات.');
-            }
+            requests.forEach(doc => {
+                dashboard.innerHTML += createCardHTML(doc);
+            });
         };
 
-        fetchRequest();
+        const filterAndSortRequests = () => {
+            let filtered = [...allRequests];
+            const searchTerm = searchInput.value.toLowerCase();
+
+            if (searchTerm) {
+                filtered = filtered.filter(doc => {
+                    const data = doc.data();
+                    return data.hospital.toLowerCase().includes(searchTerm) || data.wilaya.toLowerCase().includes(searchTerm);
+                });
+            }
+            renderRequests(filtered);
+        };
+
+        const listenToRequests = () => {
+            const sortOrder = sortOrderSelect.value;
+            const q = query(collection(db, 'donation_requests'), orderBy('createdAt', sortOrder));
+            
+            onSnapshot(q, (snapshot) => {
+                if (isInitialRequestsPageLoad) {
+                    snapshot.docs.forEach(doc => knownRequestIdsOnPage.add(doc.id));
+                    isInitialRequestsPageLoad = false;
+                } else {
+                    snapshot.docChanges().forEach(change => {
+                        if (change.type === "added" && !knownRequestIdsOnPage.has(change.doc.id)) {
+                           showNewRequestAlert(change.doc.data());
+                        }
+                    });
+                }
+                
+                allRequests = snapshot.docs;
+                filterAndSortRequests();
+                snapshot.docs.forEach(doc => knownRequestIdsOnPage.add(doc.id)); // Update known IDs after rendering
+            });
+        };
+        
+        setupSoundActivation();
+        searchInput.addEventListener('keyup', filterAndSortRequests);
+        sortOrderSelect.addEventListener('change', listenToRequests);
+        listenToRequests();
+
     </script>
 </body>
 </html>
