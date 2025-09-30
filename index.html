@@ -47,6 +47,9 @@
             background-size: 1.25em;
             padding-right: 1rem; /* Adjust padding to not overlap text */
         }
+        /* Styles for voting buttons */
+        .vote-btn.voted-like { color: var(--primary-color); }
+        .vote-btn.voted-dislike { color: var(--secondary-color); }
     </style>
 </head>
 <body class="antialiased">
@@ -271,6 +274,53 @@
         document.getElementById('mute-btn').onclick = () => audioManager.toggleMute();
         // --- END: NOTIFICATION SYSTEM LOGIC ---
 
+        // --- START: VOTING SYSTEM LOGIC ---
+        const votesManager = {
+            votes: JSON.parse(localStorage.getItem('shifaa-votes')) || {},
+            getVote(requestId) { return this.votes[requestId]; },
+            setVote(requestId, voteType) {
+                this.votes[requestId] = voteType;
+                localStorage.setItem('shifaa-votes', JSON.stringify(this.votes));
+            },
+            updateCardUI(cardElement) {
+                const likeBtn = cardElement.querySelector('[data-vote="like"]');
+                if (!likeBtn) return;
+                const dislikeBtn = cardElement.querySelector('[data-vote="dislike"]');
+                const requestId = likeBtn.dataset.id;
+                const userVote = this.getVote(requestId);
+                likeBtn.classList.remove('voted-like');
+                dislikeBtn.classList.remove('voted-dislike');
+                if (userVote === 'like') {
+                    likeBtn.classList.add('voted-like');
+                } else if (userVote === 'dislike') {
+                    dislikeBtn.classList.add('voted-dislike');
+                }
+            }
+        };
+
+        async function handleVote(requestId, voteType) {
+            const docRef = doc(db, 'donation_requests', requestId);
+            const currentVote = votesManager.getVote(requestId);
+            if (currentVote === voteType) return; // Prevent re-voting the same option
+            
+            const updates = {};
+            updates[`${voteType}s`] = increment(1); // Increment the new vote
+            
+            // If user is changing their vote, decrement the old one
+            if (currentVote) {
+                const oppositeVoteType = currentVote === 'like' ? 'dislikes' : 'likes';
+                updates[oppositeVoteType] = increment(-1);
+            }
+            
+            try {
+                await updateDoc(docRef, updates);
+                votesManager.setVote(requestId, voteType);
+            } catch (error) {
+                console.error("Error processing vote: ", error);
+            }
+        }
+        // --- END: VOTING SYSTEM LOGIC ---
+
         // --- FIREBASE & DATA DISPLAY LOGIC ---
         const dashboard = document.getElementById('dashboard');
         const getTimeAgo = (date) => {
@@ -296,8 +346,23 @@
                     const cardClasses = `bg-white p-5 rounded-xl custom-shadow-lg transition duration-300 transform hover:-translate-y-1 ${requestData.urgency}`;
                     card.className = isUnseen ? `${cardClasses} unseen-request` : cardClasses;
                     const timeAgo = getTimeAgo(requestDate);
-                    card.innerHTML = `${isUnseen ? '<div class="text-xs font-bold text-teal-700 mb-2">جديد منذ زيارتك الأخيرة</div>' : ''}<div class="flex justify-between items-start gap-4"><div><h3 class="text-xl font-bold text-gray-800 ${requestData.verified ? 'verified' : ''}">${requestData.hospital}</h3><p class="text-gray-600">${requestData.wilaya}, ${requestData.location}</p></div><div class="bg-rose-500 text-white font-bold text-2xl p-2 rounded-full w-16 h-16 flex items-center justify-center shadow-lg flex-shrink-0">${requestData.bloodType}</div></div><div class="my-4 border-t pt-4"><p class="flex items-center gap-2 text-lg" dir="ltr"><i class="fas fa-phone text-gray-400"></i><a href="tel:${requestData.phone1}" class="text-blue-600 hover:underline tracking-wider">${requestData.phone1}</a></p></div><div class="flex justify-between items-center text-sm text-gray-500 pt-3 border-t"><p class="flex items-center gap-2"><i class="fas fa-clock"></i><span>${timeAgo}</span></p><button data-id="${requestData.id}" class="report-btn bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold py-1 px-3 rounded-lg transition text-xs"><i class="fas fa-flag"></i> إبلاغ</button></div>`;
+                    card.innerHTML = `${isUnseen ? '<div class="text-xs font-bold text-teal-700 mb-2">جديد منذ زيارتك الأخيرة</div>' : ''}<div class="flex justify-between items-start gap-4"><div><h3 class="text-xl font-bold text-gray-800 ${requestData.verified ? 'verified' : ''}">${requestData.hospital}</h3><p class="text-gray-600">${requestData.wilaya}, ${requestData.location}</p></div><div class="bg-rose-500 text-white font-bold text-2xl p-2 rounded-full w-16 h-16 flex items-center justify-center shadow-lg flex-shrink-0">${requestData.bloodType}</div></div><div class="my-4 border-t pt-4"><p class="flex items-center gap-2 text-lg" dir="ltr"><i class="fas fa-phone text-gray-400"></i><a href="tel:${requestData.phone1}" class="text-blue-600 hover:underline tracking-wider">${requestData.phone1}</a></p></div>
+                    <div class="flex justify-between items-center text-sm text-gray-500 pt-3 border-t">
+                        <p class="flex items-center gap-2"><i class="fas fa-clock"></i><span>${timeAgo}</span></p>
+                        <div class="flex items-center gap-3">
+                            <button data-id="${requestData.id}" data-vote="like" class="vote-btn text-gray-500 hover:text-green-600 transition">
+                                <i class="fas fa-thumbs-up"></i> <span class="like-count font-semibold">${requestData.likes || 0}</span>
+                            </button>
+                            <button data-id="${requestData.id}" data-vote="dislike" class="vote-btn text-gray-500 hover:text-red-600 transition">
+                                <i class="fas fa-thumbs-down"></i> <span class="dislike-count font-semibold">${requestData.dislikes || 0}</span>
+                            </button>
+                            <button data-id="${requestData.id}" class="report-btn bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold py-1 px-3 rounded-lg transition text-xs">
+                                <i class="fas fa-flag"></i> إبلاغ
+                            </button>
+                        </div>
+                    </div>`;
                     dashboard.appendChild(card);
+                    votesManager.updateCardUI(card);
                 });
                 localStorage.setItem('lastVisitTimestamp', Date.now().toString());
             });
@@ -359,6 +424,8 @@
                 urgency: 'urgent',
                 verified: false,
                 reports: 0,
+                likes: 0,
+                dislikes: 0,
                 createdAt: serverTimestamp()
             };
 
@@ -378,12 +445,19 @@
             }
         });
         
-        // Dashboard click listener to handle report button
+        // Dashboard click listener to handle report and vote buttons
         dashboard.addEventListener('click', (e) => {
-            if (e.target.closest('.report-btn')) {
-                const requestId = e.target.closest('.report-btn').dataset.id;
+            const reportBtn = e.target.closest('.report-btn');
+            const voteBtn = e.target.closest('.vote-btn');
+
+            if (reportBtn) {
+                const requestId = reportBtn.dataset.id;
                 reportRequestIdInput.value = requestId;
                 toggleModal(reportReasonModal);
+            } else if (voteBtn) {
+                const requestId = voteBtn.dataset.id;
+                const voteType = voteBtn.dataset.vote;
+                handleVote(requestId, voteType);
             }
         });
         

@@ -164,7 +164,7 @@
         const imagePreview = document.getElementById('image-preview');
         const centerImageInput = document.getElementById('center-image');
 
-        const escapeHTML = str => str ? str.replace(/[&<>"']/g, match => ({'&': '&amp;','<': '&lt;','>': '&gt;','"': '&quot;',"'": '&#39;'})[match]) : '';
+        const escapeHTML = str => str ? str.replace(/[&<>"']/g, match => ({'&': '&','<': '<','>': '>','"': '"',"'": '''})[match]) : '';
 
         // --- Auth Logic ---
         onAuthStateChanged(auth, (user) => {
@@ -211,7 +211,29 @@
             const reportReasons = request.reportReasons || [];
             const reportsHTML = reportsCount > 0 
                 ? `<div class="mt-3 p-3 bg-amber-50 border-l-4 border-amber-400"><p class="text-amber-800 font-bold flex items-center gap-2"><i class="fas fa-flag"></i> تم الإبلاغ عنه ${reportsCount} ${reportsCount > 1 ? 'مرات' : 'مرة'}</p><ul class="list-disc list-inside text-sm text-amber-700 mt-2 space-y-1">${reportReasons.map(reason => `<li>${escapeHTML(reason)}</li>`).join('')}</ul></div>` : '';
-            return `<div class="bg-white p-4 rounded-xl shadow-md border-r-4 ${request.verified ? 'border-green-500' : 'border-gray-300'}"><div class="flex flex-wrap justify-between items-start gap-2 mb-3"><div><h3 class="text-lg font-bold">${escapeHTML(request.hospital)} (${escapeHTML(request.wilaya)})</h3><p class="text-gray-600" dir="ltr">${escapeHTML(request.phone1)}</p></div><div class="flex items-center gap-4"><span class="font-bold text-rose-600 text-lg">${escapeHTML(request.bloodType)}</span></div></div>${detailsHTML}${reportsHTML}<div class="flex justify-between items-center text-sm text-gray-500 mt-3 border-t pt-3"><p>أضيف في: ${date}</p><div class="flex items-center gap-2"><button data-id="${doc.id}" data-verified="${request.verified}" class="verify-btn ${request.verified ? 'bg-yellow-500' : 'bg-green-600'} text-white py-1 px-3 rounded-lg">${request.verified ? 'إلغاء التوثيق' : 'توثيق'}</button><button data-id="${doc.id}" class="delete-btn bg-rose-600 text-white py-1 px-3 rounded-lg">حذف</button></div></div></div>`;
+            
+            return `<div class="bg-white p-4 rounded-xl shadow-md border-r-4 ${request.verified ? 'border-green-500' : 'border-gray-300'}">
+                        <div class="flex flex-wrap justify-between items-start gap-2 mb-3">
+                            <div>
+                                <h3 class="text-lg font-bold">${escapeHTML(request.hospital)} (${escapeHTML(request.wilaya)})</h3>
+                                <p class="text-gray-600" dir="ltr">${escapeHTML(request.phone1)}</p>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <span class="text-sm text-green-600 flex items-center gap-1"><i class="fas fa-thumbs-up"></i> ${request.likes || 0}</span>
+                                <span class="text-sm text-rose-600 flex items-center gap-1"><i class="fas fa-thumbs-down"></i> ${request.dislikes || 0}</span>
+                                <span class="font-bold text-rose-600 text-lg">${escapeHTML(request.bloodType)}</span>
+                            </div>
+                        </div>
+                        ${detailsHTML}
+                        ${reportsHTML}
+                        <div class="flex justify-between items-center text-sm text-gray-500 mt-3 border-t pt-3">
+                            <p>أضيف في: ${date}</p>
+                            <div class="flex items-center gap-2">
+                                <button data-id="${doc.id}" data-verified="${request.verified}" class="verify-btn ${request.verified ? 'bg-yellow-500' : 'bg-green-600'} text-white py-1 px-3 rounded-lg">${request.verified ? 'إلغاء التوثيق' : 'توثيق'}</button>
+                                <button data-id="${doc.id}" class="delete-btn bg-rose-600 text-white py-1 px-3 rounded-lg">حذف</button>
+                            </div>
+                        </div>
+                    </div>`;
         };
         const listenToRequests = () => {
             const q = query(collection(db, 'donation_requests'), orderBy('createdAt', 'desc'));
