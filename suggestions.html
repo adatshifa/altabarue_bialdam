@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اقتراحاتكم - أداة شفاء</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #f0fdfa; color: #1f2937; }
+        .form-section { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .choice-card { transition: transform 0.2s, box-shadow 0.2s; }
+        .choice-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #0d9488; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; margin-left: 8px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* Style for image preview */
+        .preview-container { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+        .preview-image-wrapper { position: relative; }
+        .preview-image { width: 80px; height: 80px; object-cover; border-radius: 8px; border: 2px solid #ddd; }
+        .remove-img-btn { position: absolute; top: -5px; right: -5px; background: rgba(0,0,0,0.7); color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; border: none; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/80 backdrop-blur-md shadow-lg sticky top-0 z-40">
+        <div class="container mx-auto px-4 sm:px-6 py-3 flex justify-between items-center">
+            <a href="index.html" class="text-3xl font-extrabold text-teal-600">أداة شفاء</a>
+            <a href="index.html" class="text-gray-600 hover:text-teal-700 font-semibold flex items-center gap-2">
+                <i class="fas fa-arrow-left"></i> العودة للرئيسية
+            </a>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 py-12">
+        <div id="choice-section" class="text-center max-w-4xl mx-auto">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-gray-800 mb-4">مساهمتك تهمنا</h1>
+            <p class="text-lg text-gray-600 mb-12">اختر نوع الاقتراح الذي تود تقديمه لمساعدتنا على تحسين خدماتنا.</p>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div id="choice-center" class="choice-card bg-white p-8 rounded-xl shadow-md cursor-pointer border-2 border-transparent hover:border-teal-500">
+                    <i class="fas fa-hospital-user text-5xl text-teal-500 mb-5"></i>
+                    <h2 class="text-2xl font-bold mb-2">اقتراح مركز تبرع</h2>
+                    <p class="text-gray-600">هل تعرف مكانًا جيدًا للتبرع بالدم غير موجود في قائمتنا؟ أضفه الآن.</p>
+                </div>
+                <div id="choice-general" class="choice-card bg-white p-8 rounded-xl shadow-md cursor-pointer border-2 border-transparent hover:border-rose-500">
+                    <i class="fas fa-lightbulb text-5xl text-rose-500 mb-5"></i>
+                    <h2 class="text-2xl font-bold mb-2">اقتراح أو ملاحظة عامة</h2>
+                    <p class="text-gray-600">شاركنا بأفكارك وملاحظاتك لتحسين الأداة وجعلها أكثر فائدة للجميع.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="center-form-section" class="hidden form-section max-w-2xl mx-auto mt-12 bg-white p-8 rounded-xl shadow-lg">
+            <h2 class="text-2xl font-bold text-center mb-6">اقتراح مركز تبرع جديد</h2>
+            <form id="center-form" class="space-y-5">
+                <input type="text" name="centerName" placeholder="اسم المركز أو المستشفى" class="w-full p-3 border rounded-lg" required>
+                <input type="text" name="wilaya" placeholder="الولاية" class="w-full p-3 border rounded-lg" required>
+                <input type="text" name="location" placeholder="البلدية أو العنوان الدقيق" class="w-full p-3 border rounded-lg" required>
+                <textarea name="details" placeholder="تفاصيل إضافية (اختياري)" class="w-full p-3 border rounded-lg h-24"></textarea>
+                <div>
+                    <label class="font-semibold mb-2 block">صور للمركز (اختياري، 5 صور كحد أقصى)</label>
+                    <input type="file" name="images" id="center-images" class="w-full p-2 border rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100" multiple accept="image/*">
+                    <div id="center-preview-container" class="preview-container"></div>
+                </div>
+                <button type="submit" id="submit-center-btn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 flex items-center justify-center">
+                    <span class="btn-text">إرسال الاقتراح</span>
+                </button>
+            </form>
+        </div>
+
+        <div id="general-form-section" class="hidden form-section max-w-2xl mx-auto mt-12 bg-white p-8 rounded-xl shadow-lg">
+            <h2 class="text-2xl font-bold text-center mb-6">تقديم اقتراح أو ملاحظة</h2>
+            <form id="general-form" class="space-y-5">
+                <input type="text" name="title" placeholder="عنوان الاقتراح" class="w-full p-3 border rounded-lg" required>
+                <textarea name="details" placeholder="اشرح اقتراحك بالتفصيل..." class="w-full p-3 border rounded-lg h-32" required></textarea>
+                <div>
+                    <label class="font-semibold mb-2 block">إرفاق صور توضيحية (اختياري، 5 صور كحد أقصى)</label>
+                    <input type="file" name="images" id="general-images" class="w-full p-2 border rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-rose-50 file:text-rose-700 hover:file:bg-rose-100" multiple accept="image/*">
+                    <div id="general-preview-container" class="preview-container"></div>
+                </div>
+                <button type="submit" id="submit-general-btn" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 flex items-center justify-center">
+                    <span class="btn-text">إرسال الاقتراح</span>
+                </button>
+            </form>
+        </div>
+
+    </main>
+
+    <div id="message-modal" class="fixed inset-0 flex items-center justify-center hidden z-50 p-4 bg-black/60">
+         <div class="modal-container bg-white w-full max-w-sm rounded-xl shadow-2xl p-8 text-center" style="animation: scaleIn 0.3s ease-out;">
+            <i class="fas fa-check-circle text-5xl text-green-500 mb-4"></i>
+            <p class="text-lg mb-6">شكرًا لك! تم إرسال اقتراحك بنجاح.</p>
+            <a href="index.html" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-8 rounded-lg">حسنًا</a>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyBjGbfd-myjqLtqvdMp4b-h4LIaeZjfUto",
+          authDomain: "altabarue-bialdam.firebaseapp.com",
+          databaseURL: "https://altabarue-bialdam-default-rtdb.firebaseio.com",
+          projectId: "altabarue-bialdam",
+          storageBucket: "altabarue-bialdam.appspot.com",
+          messagingSenderId: "1032387539358",
+          appId: "1:1032387539358:web:229d33a9d5a0f522c9268f",
+          measurementId: "G-GQ6M7F21PZ"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        // --- UI Elements ---
+        const choiceSection = document.getElementById('choice-section');
+        const centerFormSection = document.getElementById('center-form-section');
+        const generalFormSection = document.getElementById('general-form-section');
+        const messageModal = document.getElementById('message-modal');
+
+        // --- File Input and Preview Handling ---
+        let centerFiles = [];
+        let generalFiles = [];
+        const maxFiles = 5;
+
+        function setupImagePreview(inputId, containerId, fileArray) {
+            const input = document.getElementById(inputId);
+            const container = document.getElementById(containerId);
+
+            input.addEventListener('change', () => {
+                if (input.files.length + fileArray.length > maxFiles) {
+                    alert(`لا يمكنك تحميل أكثر من ${maxFiles} صور.`);
+                    input.value = ''; // Clear the selection
+                    return;
+                }
+                for (const file of input.files) {
+                    fileArray.push(file);
+                }
+                renderPreviews(container, fileArray);
+                input.value = ''; // Clear input to allow re-adding same file if removed
+            });
+        }
+
+        function renderPreviews(container, fileArray) {
+            container.innerHTML = '';
+            fileArray.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'preview-image-wrapper';
+                    wrapper.innerHTML = `
+                        <img src="${e.target.result}" class="preview-image" title="${file.name}">
+                        <button class="remove-img-btn" data-index="${index}">&times;</button>
+                    `;
+                    container.appendChild(wrapper);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-img-btn')) {
+                const index = parseInt(e.target.dataset.index, 10);
+                const container = e.target.closest('.preview-container');
+                if (container.id === 'center-preview-container') {
+                    centerFiles.splice(index, 1);
+                    renderPreviews(container, centerFiles);
+                } else if (container.id === 'general-preview-container') {
+                    generalFiles.splice(index, 1);
+                    renderPreviews(container, generalFiles);
+                }
+            }
+        });
+
+        setupImagePreview('center-images', 'center-preview-container', centerFiles);
+        setupImagePreview('general-images', 'general-preview-container', generalFiles);
+
+
+        // --- UI Logic ---
+        document.getElementById('choice-center').addEventListener('click', () => {
+            choiceSection.classList.add('hidden');
+            centerFormSection.classList.remove('hidden');
+        });
+
+        document.getElementById('choice-general').addEventListener('click', () => {
+            choiceSection.classList.add('hidden');
+            generalFormSection.classList.remove('hidden');
+        });
+        
+        const toggleButtonState = (btn, isSubmitting) => {
+            btn.disabled = isSubmitting;
+            const btnText = btn.querySelector('.btn-text');
+            if (isSubmitting) {
+                btnText.textContent = 'جاري الإرسال...';
+                const loader = document.createElement('div');
+                loader.className = 'loader';
+                btn.appendChild(loader);
+            } else {
+                btnText.textContent = 'إرسال الاقتراح';
+                const loader = btn.querySelector('.loader');
+                if (loader) loader.remove();
+            }
+        };
+
+        // --- Firebase Logic ---
+        async function uploadImages(files, suggestionId) {
+            const imageUrls = [];
+            for (const file of files) {
+                const filePath = `suggestions/${suggestionId}/${Date.now()}_${file.name}`;
+                const storageRef = ref(storage, filePath);
+                const snapshot = await uploadBytes(storageRef, file);
+                const url = await getDownloadURL(snapshot.ref);
+                imageUrls.push(url);
+            }
+            return imageUrls;
+        }
+
+        document.getElementById('center-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const btn = document.getElementById('submit-center-btn');
+            toggleButtonState(btn, true);
+
+            try {
+                // Add a placeholder doc to get an ID
+                const tempDocRef = await addDoc(collection(db, "suggestions"), {});
+                const suggestionId = tempDocRef.id;
+                
+                const imageUrls = await uploadImages(centerFiles, suggestionId);
+
+                const data = {
+                    type: 'center_suggestion',
+                    centerName: form.centerName.value,
+                    wilaya: form.wilaya.value,
+                    location: form.location.value,
+                    details: form.details.value,
+                    imageUrls: imageUrls,
+                    status: 'new',
+                    createdAt: serverTimestamp()
+                };
+                
+                // Now, set the actual data in the document
+                const { setDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                await setDoc(tempDocRef, data);
+                
+                messageModal.classList.remove('hidden');
+            } catch (error) {
+                console.error("Error submitting center suggestion: ", error);
+                alert('حدث خطأ أثناء إرسال الاقتراح. الرجاء المحاولة مرة أخرى.');
+            } finally {
+                toggleButtonState(btn, false);
+            }
+        });
+
+        document.getElementById('general-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const btn = document.getElementById('submit-general-btn');
+            toggleButtonState(btn, true);
+
+            try {
+                const tempDocRef = await addDoc(collection(db, "suggestions"), {});
+                const suggestionId = tempDocRef.id;
+
+                const imageUrls = await uploadImages(generalFiles, suggestionId);
+                
+                const data = {
+                    type: 'general_suggestion',
+                    title: form.title.value,
+                    details: form.details.value,
+                    imageUrls: imageUrls,
+                    status: 'new',
+                    createdAt: serverTimestamp()
+                };
+
+                const { setDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                await setDoc(tempDocRef, data);
+
+                messageModal.classList.remove('hidden');
+            } catch (error) {
+                console.error("Error submitting general suggestion: ", error);
+                alert('حدث خطأ أثناء إرسال الاقتراح. الرجاء المحاولة مرة أخرى.');
+            } finally {
+                toggleButtonState(btn, false);
+            }
+        });
+
+    </script>
+</body>
+</html>

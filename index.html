@@ -36,17 +36,6 @@
             border-left: 5px solid var(--primary-color);
             background-color: #f0fdfa;
         }
-        /* -- NEW STYLES FOR BLOOD TYPE BUTTONS -- */
-        .blood-type-btn {
-            transition: all 0.2s ease-in-out;
-            border: 2px solid #e5e7eb;
-        }
-        .blood-type-btn.selected {
-            background-color: var(--primary-color);
-            color: white;
-            border-color: var(--primary-color);
-            transform: scale(1.05);
-        }
         /* Style for the dropdown arrow */
         select {
             -webkit-appearance: none;
@@ -105,26 +94,38 @@
             <h2 class="text-2xl font-bold text-teal-600">القائمة</h2>
             <button id="close-btn" class="fas fa-times text-2xl text-gray-500 cursor-pointer w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100"></button>
         </div>
-        <nav class="flex flex-col gap-3">
+
+        <nav class="flex-grow flex flex-col gap-3">
             <a href="donate.html" class="flex items-center gap-4 p-4 rounded-lg text-lg font-semibold hover:bg-teal-50 transition-colors"><i class="fas fa-hand-holding-heart text-teal-500 w-6 text-center"></i><span>أريد التبرع</span></a>
             <a href="requests.html" class="flex items-center gap-4 p-4 rounded-lg text-lg font-semibold hover:bg-teal-50 transition-colors"><i class="fas fa-list-alt text-teal-500 w-6 text-center"></i><span>تصفح الطلبات</span></a>
             <a href="centers.html" class="flex items-center gap-4 p-4 rounded-lg text-lg font-semibold hover:bg-teal-50 transition-colors"><i class="fas fa-hospital text-teal-500 w-6 text-center"></i><span>أماكن التبرع</span></a>
+            <a href="suggestions.html" class="flex items-center gap-4 p-4 rounded-lg text-lg font-semibold hover:bg-teal-50 transition-colors"><i class="fas fa-lightbulb text-teal-500 w-6 text-center"></i><span>اقتراحاتكم</span></a>
             <a href="why-donate.html" class="flex items-center gap-4 p-4 rounded-lg text-lg font-semibold hover:bg-teal-50 transition-colors"><i class="fas fa-question-circle text-teal-500 w-6 text-center"></i><span>لماذا علينا التبرع؟</span></a>
             <a href="contact.html" class="flex items-center gap-4 p-4 rounded-lg text-lg font-semibold hover:bg-teal-50 transition-colors"><i class="fas fa-paper-plane text-teal-500 w-6 text-center"></i><span>تواصل معنا</span></a>
         </nav>
-    </aside>
 
+        <div>
+            <div class="border-t border-gray-200 my-4"></div>
+            <button id="admin-login-btn" class="w-full flex items-center gap-4 p-4 rounded-lg text-lg font-semibold bg-gray-100 hover:bg-gray-200 transition-colors text-gray-700">
+                <i class="fas fa-user-shield text-gray-600 w-6 text-center"></i>
+                <span>خاص بالمشرفين</span>
+            </button>
+        </div>
+    </aside>
     <main class="container mx-auto px-4 sm:px-6 pt-24 sm:pt-28">
          <section class="text-center py-16 md:py-24">
             <h1 class="text-4xl md:text-6xl font-extrabold text-gray-800 mb-4 leading-tight">قطرة دم منك، حياة لغيرك</h1>
             <p class="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mb-10">منصة شفاء تربط بين المتبرعين بالدم والمحتاجين إليه بسهولة وسرعة. كن سبباً في إنقاذ حياة.</p>
-            <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
+         <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
                 <a href="donate.html" class="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white font-bold py-4 px-8 rounded-lg transition text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1">
                     <i class="fas fa-hand-holding-heart mr-2"></i> أريد التبرع
                 </a>
                 <button id="open-request-modal-btn" class="w-full sm:w-auto bg-rose-500 hover:bg-rose-600 text-white font-bold py-4 px-8 rounded-lg transition text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1">
                     <i class="fas fa-bullhorn mr-2"></i> الإبلاغ عن حالة
                 </button>
+                <a href="suggestions.html" class="w-full sm:w-auto bg-gray-700 hover:bg-gray-800 text-white font-bold py-4 px-8 rounded-lg transition text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1">
+                    <i class="fas fa-lightbulb mr-2"></i> اقتراحاتكم
+                </a>
             </div>
         </section>
 
@@ -145,19 +146,20 @@
             <div class="p-6">
                 <h2 class="text-2xl font-bold text-center mb-6">الإبلاغ عن حالة جديدة</h2>
                 <form id="request-form" class="space-y-5">
+                    
                     <div>
-                        <label class="font-semibold mb-3 block">فصيلة الدم المطلوبة <span class="text-red-500">*</span></label>
-                        <input type="hidden" name="bloodType" id="bloodType-hidden-input">
-                        <div id="blood-type-selector" class="grid grid-cols-4 gap-2 text-center">
-                            <button type="button" data-value="A+" class="blood-type-btn p-3 rounded-lg font-bold text-lg">A+</button>
-                            <button type="button" data-value="A-" class="blood-type-btn p-3 rounded-lg font-bold text-lg">A-</button>
-                            <button type="button" data-value="B+" class="blood-type-btn p-3 rounded-lg font-bold text-lg">B+</button>
-                            <button type="button" data-value="B-" class="blood-type-btn p-3 rounded-lg font-bold text-lg">B-</button>
-                            <button type="button" data-value="O+" class="blood-type-btn p-3 rounded-lg font-bold text-lg">O+</button>
-                            <button type="button" data-value="O-" class="blood-type-btn p-3 rounded-lg font-bold text-lg">O-</button>
-                            <button type="button" data-value="AB+" class="blood-type-btn p-3 rounded-lg font-bold text-lg">AB+</button>
-                            <button type="button" data-value="AB-" class="blood-type-btn p-3 rounded-lg font-bold text-lg">AB-</button>
-                        </div>
+                        <label for="bloodType-select" class="font-semibold mb-2 block">فصيلة الدم المطلوبة <span class="text-red-500">*</span></label>
+                        <select name="bloodType" id="bloodType-select" class="w-full p-3 border rounded-lg bg-white" required>
+                            <option value="" disabled selected>-- اختر فصيلة الدم --</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                        </select>
                     </div>
                     <input type="text" name="hospital" placeholder="اسم المستشفى" class="w-full p-3 border rounded-lg" required>
                     <input type="text" name="wilaya" placeholder="الولاية" class="w-full p-3 border rounded-lg" required>
@@ -196,6 +198,28 @@
         </div>
     </div>
 
+    <div id="admin-password-modal" class="modal fixed inset-0 flex items-center justify-center hidden z-50 p-4 bg-black/60">
+        <div class="modal-container bg-white w-full max-w-sm rounded-xl shadow-2xl relative my-8">
+            <button class="close-modal-btn absolute top-4 left-4 text-gray-500 hover:text-gray-800 text-2xl z-10">&times;</button>
+            <div class="p-6">
+                <h2 class="text-2xl font-bold text-center mb-6">دخول المشرفين</h2>
+                <form id="admin-password-form" class="space-y-4">
+                    <div>
+                        <label for="admin-password" class="font-semibold mb-2 block">الرجاء إدخال كلمة السر</label>
+                        <div class="relative">
+                            <input type="password" id="admin-password" name="password" class="w-full p-3 border rounded-lg text-center pl-12" required>
+                            <button type="button" id="toggle-admin-password" title="إظهار/إخفاء كلمة السر" class="absolute top-1/2 left-4 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <p id="admin-password-error" class="text-red-500 text-sm mt-2 text-center hidden">كلمة السر غير صحيحة.</p>
+                    </div>
+                    <button type="submit" id="submit-admin-password-btn" class="w-full bg-gray-700 hover:bg-gray-800 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105">دخول</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, query, doc, updateDoc, increment, arrayUnion, limit, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -214,7 +238,6 @@
         const db = getFirestore(app);
         
         // --- START: NOTIFICATION SYSTEM LOGIC ---
-        // ... (This part is unchanged)
         let newRequestCount = 0;
         let originalTitle = document.title;
         let titleInterval = null;
@@ -249,7 +272,6 @@
         // --- END: NOTIFICATION SYSTEM LOGIC ---
 
         // --- FIREBASE & DATA DISPLAY LOGIC ---
-        // ... (This part is unchanged)
         const dashboard = document.getElementById('dashboard');
         const getTimeAgo = (date) => {
             const seconds = Math.floor((new Date() - date) / 1000); let interval = seconds / 31536000;
@@ -290,13 +312,19 @@
         const requestModal = document.getElementById('request-modal');
         const messageModal = document.getElementById('message-modal');
         const requestForm = document.getElementById('request-form');
-        const bloodTypeSelector = document.getElementById('blood-type-selector');
-        const bloodTypeHiddenInput = document.getElementById('bloodType-hidden-input');
-        
-        // NEW: Report Reason Modal elements
         const reportReasonModal = document.getElementById('report-reason-modal');
         const reportReasonForm = document.getElementById('report-reason-form');
         const reportRequestIdInput = document.getElementById('report-request-id');
+        
+        // Admin Modal elements
+        const adminLoginBtn = document.getElementById('admin-login-btn');
+        const adminPasswordModal = document.getElementById('admin-password-modal');
+        const adminPasswordForm = document.getElementById('admin-password-form');
+        const adminPasswordInput = document.getElementById('admin-password');
+        const adminPasswordError = document.getElementById('admin-password-error');
+        // START: New element for password toggle
+        const toggleAdminPasswordBtn = document.getElementById('toggle-admin-password');
+
 
         const toggleMenu = () => {
             sideBar.classList.toggle('-right-full'); sideBar.classList.toggle('right-0');
@@ -310,27 +338,13 @@
         overlay.addEventListener('click', toggleMenu);
         
         openRequestModalBtn.addEventListener('click', () => toggleModal(requestModal));
-
-        // NEW: Blood type button selection logic
-        bloodTypeSelector.addEventListener('click', (e) => {
-            if (e.target.tagName === 'BUTTON') {
-                bloodTypeSelector.querySelectorAll('.blood-type-btn').forEach(btn => btn.classList.remove('selected'));
-                e.target.classList.add('selected');
-                bloodTypeHiddenInput.value = e.target.dataset.value;
-            }
-        });
         
-        // UPDATED: Handle form submission
+        // Handle form submission
         requestForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const submitBtn = document.getElementById('submit-request-btn');
             if (submitBtn.disabled) return;
-
-            // Validate blood type selection
-            if (!bloodTypeHiddenInput.value) {
-                alert('الرجاء اختيار فصيلة الدم المطلوبة.');
-                return;
-            }
+            
             submitBtn.disabled = true;
             submitBtn.textContent = 'جاري الإرسال...';
             
@@ -352,7 +366,6 @@
                 await addDoc(collection(db, "donation_requests"), data);
                 toggleModal(requestModal);
                 requestForm.reset();
-                bloodTypeSelector.querySelectorAll('.blood-type-btn').forEach(btn => btn.classList.remove('selected'));
                 document.getElementById('message-text').textContent = 'تم إضافة طلبك بنجاح!';
                 document.getElementById('message-icon').className = 'fas fa-check-circle text-5xl text-green-500 mb-4';
                 toggleModal(messageModal);
@@ -365,16 +378,16 @@
             }
         });
         
-        // UPDATED: Dashboard click listener to handle report button
+        // Dashboard click listener to handle report button
         dashboard.addEventListener('click', (e) => {
             if (e.target.closest('.report-btn')) {
                 const requestId = e.target.closest('.report-btn').dataset.id;
-                reportRequestIdInput.value = requestId; // Set the ID in the report form
-                toggleModal(reportReasonModal); // Show the new report modal
+                reportRequestIdInput.value = requestId;
+                toggleModal(reportReasonModal);
             }
         });
         
-        // NEW: Handle report reason form submission
+        // Handle report reason form submission
         reportReasonForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const submitBtn = document.getElementById('submit-report-btn');
@@ -388,7 +401,6 @@
             const docRef = doc(db, 'donation_requests', requestId);
 
             try {
-                // Increment report count and add the reason to an array
                 await updateDoc(docRef, {
                     reports: increment(1),
                     reportReasons: arrayUnion(reason)
@@ -410,6 +422,46 @@
         document.querySelectorAll('.close-modal-btn').forEach(btn => {
             btn.addEventListener('click', (e) => toggleModal(e.target.closest('.modal')));
         });
+        
+        // --- ADMIN LOGIN LOGIC ---
+        adminLoginBtn.addEventListener('click', () => {
+            if (!sideBar.classList.contains('-right-full')) {
+                toggleMenu(); // Close sidebar if open
+            }
+            toggleModal(adminPasswordModal);
+            adminPasswordInput.focus();
+        });
+
+        adminPasswordForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const enteredPassword = adminPasswordInput.value;
+            const correctPassword = 'ADATSHIFAS22MARKETADMIN';
+
+            if (enteredPassword === correctPassword) {
+                window.location.href = 'dashboard.html';
+            } else {
+                adminPasswordError.classList.remove('hidden');
+                adminPasswordInput.classList.add('border-red-500');
+                adminPasswordForm.parentElement.classList.add('animate-shake'); // Simple shake animation
+                setTimeout(() => {
+                    adminPasswordError.classList.add('hidden');
+                    adminPasswordInput.classList.remove('border-red-500');
+                    adminPasswordInput.value = '';
+                    adminPasswordForm.parentElement.classList.remove('animate-shake');
+                }, 2000);
+            }
+        });
+        
+        // START: New logic for password visibility toggle
+        toggleAdminPasswordBtn.addEventListener('click', () => {
+            const isPassword = adminPasswordInput.type === 'password';
+            adminPasswordInput.type = isPassword ? 'text' : 'password';
+            const icon = toggleAdminPasswordBtn.querySelector('i');
+            icon.classList.toggle('fa-eye');
+            icon.classList.toggle('fa-eye-slash');
+        });
+        // END: New logic for password visibility toggle
+
 
         // --- Initialize Everything ---
         setupSoundActivation();
