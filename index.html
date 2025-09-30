@@ -223,323 +223,298 @@
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, query, doc, updateDoc, increment, arrayUnion, limit, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, query, doc, updateDoc, increment, arrayUnion, limit, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = {
-          apiKey: "AIzaSyBjGbfd-myjqLtqvdMp4b-h4LIaeZjfUto",
-          authDomain: "altabarue-bialdam.firebaseapp.com",
-          databaseURL: "https://altabarue-bialdam-default-rtdb.firebaseio.com",
-          projectId: "altabarue-bialdam",
-          storageBucket: "altabarue-bialdam.appspot.com",
-          messagingSenderId: "1032387539358",
-          appId: "1:1032387539358:web:229d33a9d5a0f522c9268f",
-          measurementId: "G-GQ6M7F21PZ"
-        };
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+    const firebaseConfig = {
+      apiKey: "AIzaSyBjGbfd-myjqLtqvdMp4b-h4LIaeZjfUto",
+      authDomain: "altabarue-bialdam.firebaseapp.com",
+      databaseURL: "https://altabarue-bialdam-default-rtdb.firebaseio.com",
+      projectId: "altabarue-bialdam",
+      storageBucket: "altabarue-bialdam.appspot.com",
+      messagingSenderId: "1032387539358",
+      appId: "1:1032387539358:web:229d33a9d5a0f522c9268f",
+      measurementId: "G-GQ6M7F21PZ"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    
+    // --- START: NOTIFICATION SYSTEM LOGIC (No changes) ---
+    let newRequestCount = 0;
+    let originalTitle = document.title;
+    let titleInterval = null;
+    let isInitialLoad = true;
+    let knownRequestIds = new Set();
+    const audioManager = {
+        element: document.getElementById('notification-sound'), isMuted: false, isUnlocked: false,
+        unlock() { if (this.isUnlocked) return; this.element.play().then(() => this.element.pause()).catch(e => {}); this.isUnlocked = true; },
+        play() { if (this.isMuted || !this.isUnlocked) return; this.element.loop = true; this.element.play().catch(e => console.error("Audio play failed:", e)); },
+        stop() { this.element.pause(); this.element.currentTime = 0; },
+        toggleMute() { this.isMuted = !this.isMuted; document.getElementById('mute-icon').className = this.isMuted ? 'fas fa-volume-mute text-red-500' : 'fas fa-volume-up'; document.getElementById('mute-btn').title = this.isMuted ? 'تشغيل صوت الإشعارات' : 'كتم صوت الإشعارات'; if (this.isMuted) this.stop(); }
+    };
+    function setupSoundActivation() {
+        const soundModal = document.getElementById('sound-activation-modal');
+        if (localStorage.getItem('soundActivated') === 'true') { audioManager.isUnlocked = true; return; }
+        soundModal.classList.remove('hidden');
+        document.getElementById('activate-sound-btn').onclick = () => { audioManager.unlock(); localStorage.setItem('soundActivated', 'true'); soundModal.classList.add('hidden'); };
+    }
+    const newRequestModal = document.getElementById('new-request-alert-modal');
+    document.getElementById('modal-confirm-btn').onclick = hideNewRequestAlert;
+    function flashTitle() { if (newRequestCount > 0) { document.title = document.title === originalTitle ? `(${newRequestCount}) حالة جديدة!` : originalTitle; } else { clearInterval(titleInterval); titleInterval = null; document.title = originalTitle; } }
+    window.onfocus = () => { newRequestCount = 0; flashTitle(); };
+    function showNewRequestAlert(request) {
+        document.getElementById('modal-request-details').innerHTML = `<div class="flex justify-between items-center text-lg"><span class="text-gray-200">المستشفى:</span><span class="font-bold text-white">${request.hospital}</span></div><div class="flex justify-between items-center text-lg"><span class="text-gray-200">الولاية:</span><span class="font-bold text-white">${request.wilaya}</span></div><div class="flex justify-between items-center text-2xl mt-2 pt-2 border-t border-red-700"><span class="text-gray-200">الفصيلة:</span><span class="font-extrabold text-yellow-300">${request.bloodType}</span></div>`;
+        newRequestModal.classList.remove('hidden');
+        audioManager.play();
+        newRequestCount++;
+        if (!titleInterval) { titleInterval = setInterval(flashTitle, 1000); }
+    }
+    function hideNewRequestAlert() { newRequestModal.classList.add('hidden'); audioManager.stop(); }
+    document.getElementById('mute-btn').onclick = () => audioManager.toggleMute();
+    // --- END: NOTIFICATION SYSTEM LOGIC ---
+
+    // --- START: VOTING SYSTEM LOGIC (UPDATED) ---
+    const votesManager = {
+        votes: JSON.parse(localStorage.getItem('shifaa-votes')) || {},
+        getVote(requestId) { return this.votes[requestId]; },
+        setVote(requestId, voteType) {
+            this.votes[requestId] = voteType;
+            localStorage.setItem('shifaa-votes', JSON.stringify(this.votes));
+        },
+        updateCardUI(cardElement) {
+            const likeBtn = cardElement.querySelector('[data-vote="like"]');
+            if (!likeBtn) return;
+            const dislikeBtn = cardElement.querySelector('[data-vote="dislike"]');
+            const requestId = likeBtn.dataset.id;
+            const userVote = this.getVote(requestId);
+
+            likeBtn.classList.remove('voted-like');
+            dislikeBtn.classList.remove('voted-dislike');
+
+            if (userVote === 'like') {
+                likeBtn.classList.add('voted-like');
+            } else if (userVote === 'dislike') {
+                dislikeBtn.classList.add('voted-dislike');
+            }
+        }
+    };
+
+    async function handleVote(requestId, voteType) {
+        const docRef = doc(db, 'donation_requests', requestId);
+        const currentVote = votesManager.getVote(requestId);
+
+        // If the user clicks the same button again, do nothing.
+        if (currentVote === voteType) return;
         
-        // --- START: NOTIFICATION SYSTEM LOGIC ---
-        let newRequestCount = 0;
-        let originalTitle = document.title;
-        let titleInterval = null;
-        let isInitialLoad = true;
-        let knownRequestIds = new Set();
-        const audioManager = {
-            element: document.getElementById('notification-sound'), isMuted: false, isUnlocked: false,
-            unlock() { if (this.isUnlocked) return; this.element.play().then(() => this.element.pause()).catch(e => {}); this.isUnlocked = true; },
-            play() { if (this.isMuted || !this.isUnlocked) return; this.element.loop = true; this.element.play().catch(e => console.error("Audio play failed:", e)); },
-            stop() { this.element.pause(); this.element.currentTime = 0; },
-            toggleMute() { this.isMuted = !this.isMuted; document.getElementById('mute-icon').className = this.isMuted ? 'fas fa-volume-mute text-red-500' : 'fas fa-volume-up'; document.getElementById('mute-btn').title = this.isMuted ? 'تشغيل صوت الإشعارات' : 'كتم صوت الإشعارات'; if (this.isMuted) this.stop(); }
-        };
-        function setupSoundActivation() {
-            const soundModal = document.getElementById('sound-activation-modal');
-            if (localStorage.getItem('soundActivated') === 'true') { audioManager.isUnlocked = true; return; }
-            soundModal.classList.remove('hidden');
-            document.getElementById('activate-sound-btn').onclick = () => { audioManager.unlock(); localStorage.setItem('soundActivated', 'true'); soundModal.classList.add('hidden'); };
+        // --- Optimistic Update ---
+        // 1. Immediately update local storage and UI
+        votesManager.setVote(requestId, voteType);
+        const cardElement = document.querySelector(`.vote-btn[data-id="${requestId}"]`).closest('.bg-white');
+        if (cardElement) {
+           votesManager.updateCardUI(cardElement);
         }
-        const newRequestModal = document.getElementById('new-request-alert-modal');
-        document.getElementById('modal-confirm-btn').onclick = hideNewRequestAlert;
-        function flashTitle() { if (newRequestCount > 0) { document.title = document.title === originalTitle ? `(${newRequestCount}) حالة جديدة!` : originalTitle; } else { clearInterval(titleInterval); titleInterval = null; document.title = originalTitle; } }
-        window.onfocus = () => { newRequestCount = 0; flashTitle(); };
-        function showNewRequestAlert(request) {
-            document.getElementById('modal-request-details').innerHTML = `<div class="flex justify-between items-center text-lg"><span class="text-gray-200">المستشفى:</span><span class="font-bold text-white">${request.hospital}</span></div><div class="flex justify-between items-center text-lg"><span class="text-gray-200">الولاية:</span><span class="font-bold text-white">${request.wilaya}</span></div><div class="flex justify-between items-center text-2xl mt-2 pt-2 border-t border-red-700"><span class="text-gray-200">الفصيلة:</span><span class="font-extrabold text-yellow-300">${request.bloodType}</span></div>`;
-            newRequestModal.classList.remove('hidden');
-            audioManager.play();
-            newRequestCount++;
-            if (!titleInterval) { titleInterval = setInterval(flashTitle, 1000); }
+
+        // 2. Prepare the database update
+        const updates = {};
+        updates[`${voteType}s`] = increment(1); // Increment the new vote (e.g., 'likes')
+        
+        // If the user is changing their vote, decrement the old one
+        if (currentVote) {
+            const oppositeVoteType = currentVote === 'like' ? 'dislikes' : 'likes';
+            updates[oppositeVoteType] = increment(-1);
         }
-        function hideNewRequestAlert() { newRequestModal.classList.add('hidden'); audioManager.stop(); }
-        document.getElementById('mute-btn').onclick = () => audioManager.toggleMute();
-        // --- END: NOTIFICATION SYSTEM LOGIC ---
-
-        // --- START: VOTING SYSTEM LOGIC ---
-        const votesManager = {
-            votes: JSON.parse(localStorage.getItem('shifaa-votes')) || {},
-            getVote(requestId) { return this.votes[requestId]; },
-            setVote(requestId, voteType) {
-                this.votes[requestId] = voteType;
-                localStorage.setItem('shifaa-votes', JSON.stringify(this.votes));
-            },
-            updateCardUI(cardElement) {
-                const likeBtn = cardElement.querySelector('[data-vote="like"]');
-                if (!likeBtn) return;
-                const dislikeBtn = cardElement.querySelector('[data-vote="dislike"]');
-                const requestId = likeBtn.dataset.id;
-                const userVote = this.getVote(requestId);
-                likeBtn.classList.remove('voted-like');
-                dislikeBtn.classList.remove('voted-dislike');
-                if (userVote === 'like') {
-                    likeBtn.classList.add('voted-like');
-                } else if (userVote === 'dislike') {
-                    dislikeBtn.classList.add('voted-dislike');
-                }
-            }
-        };
-
-        async function handleVote(requestId, voteType) {
-            const docRef = doc(db, 'donation_requests', requestId);
-            const currentVote = votesManager.getVote(requestId);
-            if (currentVote === voteType) return; // Prevent re-voting the same option
-            
-            const updates = {};
-            updates[`${voteType}s`] = increment(1); // Increment the new vote
-            
-            // If user is changing their vote, decrement the old one
-            if (currentVote) {
-                const oppositeVoteType = currentVote === 'like' ? 'dislikes' : 'likes';
-                updates[oppositeVoteType] = increment(-1);
-            }
-            
-            try {
-                await updateDoc(docRef, updates);
-                votesManager.setVote(requestId, voteType);
-            } catch (error) {
-                console.error("Error processing vote: ", error);
-            }
+        
+        // 3. Send the update to Firebase
+        try {
+            await updateDoc(docRef, updates);
+        } catch (error) {
+            console.error("Error processing vote: ", error);
+            // Revert local storage if the database update fails
+            votesManager.setVote(requestId, currentVote); 
+             if (cardElement) {
+                votesManager.updateCardUI(cardElement);
+             }
         }
-        // --- END: VOTING SYSTEM LOGIC ---
+    }
+    // --- END: VOTING SYSTEM LOGIC ---
 
-        // --- FIREBASE & DATA DISPLAY LOGIC ---
-        const dashboard = document.getElementById('dashboard');
-        const getTimeAgo = (date) => {
-            const seconds = Math.floor((new Date() - date) / 1000); let interval = seconds / 31536000;
-            if (interval > 1) return `قبل ${Math.floor(interval)} سنة`; interval = seconds / 2592000;
-            if (interval > 1) return `قبل ${Math.floor(interval)} شهر`; interval = seconds / 86400;
-            if (interval > 1) return `قبل ${Math.floor(interval)} يوم`; interval = seconds / 3600;
-            if (interval > 1) return `قبل ${Math.floor(interval)} ساعة`; interval = seconds / 60;
-            if (interval > 1) return `قبل ${Math.floor(interval)} دقيقة`; return "قبل لحظات";
-        };
-        const fetchAndDisplayRequests = () => {
-            const q = query(collection(db, 'donation_requests'), orderBy('createdAt', 'desc'), limit(6));
-            const lastVisitTimestamp = localStorage.getItem('lastVisitTimestamp');
-            onSnapshot(q, (snapshot) => {
-                const requests = []; snapshot.forEach(doc => requests.push({ id: doc.id, ...doc.data() }));
-                dashboard.innerHTML = '';
-                if (requests.length === 0) { dashboard.innerHTML = `<div class="text-center p-10 bg-white rounded-xl custom-shadow-lg md:col-span-3"><p class="text-gray-500 text-xl">لا توجد حالات حالياً.</p></div>`; return; }
-                if (isInitialLoad) { requests.forEach(req => knownRequestIds.add(req.id)); isInitialLoad = false; } else { requests.forEach(req => { if (!knownRequestIds.has(req.id)) { showNewRequestAlert(req); knownRequestIds.add(req.id); } }); }
-                requests.forEach((requestData) => {
-                    const card = document.createElement('div');
-                    const requestDate = requestData.createdAt ? requestData.createdAt.toDate() : new Date();
-                    const isUnseen = lastVisitTimestamp && requestDate.getTime() > lastVisitTimestamp;
-                    const cardClasses = `bg-white p-5 rounded-xl custom-shadow-lg transition duration-300 transform hover:-translate-y-1 ${requestData.urgency}`;
-                    card.className = isUnseen ? `${cardClasses} unseen-request` : cardClasses;
-                    const timeAgo = getTimeAgo(requestDate);
-                    card.innerHTML = `${isUnseen ? '<div class="text-xs font-bold text-teal-700 mb-2">جديد منذ زيارتك الأخيرة</div>' : ''}<div class="flex justify-between items-start gap-4"><div><h3 class="text-xl font-bold text-gray-800 ${requestData.verified ? 'verified' : ''}">${requestData.hospital}</h3><p class="text-gray-600">${requestData.wilaya}, ${requestData.location}</p></div><div class="bg-rose-500 text-white font-bold text-2xl p-2 rounded-full w-16 h-16 flex items-center justify-center shadow-lg flex-shrink-0">${requestData.bloodType}</div></div><div class="my-4 border-t pt-4"><p class="flex items-center gap-2 text-lg" dir="ltr"><i class="fas fa-phone text-gray-400"></i><a href="tel:${requestData.phone1}" class="text-blue-600 hover:underline tracking-wider">${requestData.phone1}</a></p></div>
-                    <div class="flex justify-between items-center text-sm text-gray-500 pt-3 border-t">
-                        <p class="flex items-center gap-2"><i class="fas fa-clock"></i><span>${timeAgo}</span></p>
-                        <div class="flex items-center gap-3">
-                            <button data-id="${requestData.id}" data-vote="like" class="vote-btn text-gray-500 hover:text-green-600 transition">
-                                <i class="fas fa-thumbs-up"></i> <span class="like-count font-semibold">${requestData.likes || 0}</span>
-                            </button>
-                            <button data-id="${requestData.id}" data-vote="dislike" class="vote-btn text-gray-500 hover:text-red-600 transition">
-                                <i class="fas fa-thumbs-down"></i> <span class="dislike-count font-semibold">${requestData.dislikes || 0}</span>
-                            </button>
-                            <button data-id="${requestData.id}" class="report-btn bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold py-1 px-3 rounded-lg transition text-xs">
-                                <i class="fas fa-flag"></i> إبلاغ
-                            </button>
-                        </div>
-                    </div>`;
-                    dashboard.appendChild(card);
-                    votesManager.updateCardUI(card);
-                });
-                localStorage.setItem('lastVisitTimestamp', Date.now().toString());
+    // --- FIREBASE & DATA DISPLAY LOGIC ---
+    const dashboard = document.getElementById('dashboard');
+    const getTimeAgo = (date) => {
+        const seconds = Math.floor((new Date() - date) / 1000); let interval = seconds / 31536000;
+        if (interval > 1) return `قبل ${Math.floor(interval)} سنة`; interval = seconds / 2592000;
+        if (interval > 1) return `قبل ${Math.floor(interval)} شهر`; interval = seconds / 86400;
+        if (interval > 1) return `قبل ${Math.floor(interval)} يوم`; interval = seconds / 3600;
+        if (interval > 1) return `قبل ${Math.floor(interval)} ساعة`; interval = seconds / 60;
+        if (interval > 1) return `قبل ${Math.floor(interval)} دقيقة`; return "قبل لحظات";
+    };
+    const fetchAndDisplayRequests = () => {
+        const q = query(collection(db, 'donation_requests'), orderBy('createdAt', 'desc'), limit(6));
+        const lastVisitTimestamp = localStorage.getItem('lastVisitTimestamp');
+        onSnapshot(q, (snapshot) => {
+            const requests = []; snapshot.forEach(doc => requests.push({ id: doc.id, ...doc.data() }));
+            dashboard.innerHTML = '';
+            if (requests.length === 0) { dashboard.innerHTML = `<div class="text-center p-10 bg-white rounded-xl custom-shadow-lg md-col-span-3"><p class="text-gray-500 text-xl">لا توجد حالات حالياً.</p></div>`; return; }
+            if (isInitialLoad) { requests.forEach(req => knownRequestIds.add(req.id)); isInitialLoad = false; } else { requests.forEach(req => { if (!knownRequestIds.has(req.id)) { showNewRequestAlert(req); knownRequestIds.add(req.id); } }); }
+            requests.forEach((requestData) => {
+                const card = document.createElement('div');
+                const requestDate = requestData.createdAt ? requestData.createdAt.toDate() : new Date();
+                const isUnseen = lastVisitTimestamp && requestDate.getTime() > lastVisitTimestamp;
+                const cardClasses = `bg-white p-5 rounded-xl custom-shadow-lg transition duration-300 transform hover:-translate-y-1 ${requestData.urgency}`;
+                card.className = isUnseen ? `${cardClasses} unseen-request` : cardClasses;
+                const timeAgo = getTimeAgo(requestDate);
+                card.innerHTML = `${isUnseen ? '<div class="text-xs font-bold text-teal-700 mb-2">جديد منذ زيارتك الأخيرة</div>' : ''}<div class="flex justify-between items-start gap-4"><div><h3 class="text-xl font-bold text-gray-800 ${requestData.verified ? 'verified' : ''}">${requestData.hospital}</h3><p class="text-gray-600">${requestData.wilaya}, ${requestData.location}</p></div><div class="bg-rose-500 text-white font-bold text-2xl p-2 rounded-full w-16 h-16 flex items-center justify-center shadow-lg flex-shrink-0">${requestData.bloodType}</div></div><div class="my-4 border-t pt-4"><p class="flex items-center gap-2 text-lg" dir="ltr"><i class="fas fa-phone text-gray-400"></i><a href="tel:${requestData.phone1}" class="text-blue-600 hover:underline tracking-wider">${requestData.phone1}</a></p></div>
+                <div class="flex justify-between items-center text-sm text-gray-500 pt-3 border-t">
+                    <p class="flex items-center gap-2"><i class="fas fa-clock"></i><span>${timeAgo}</span></p>
+                    <div class="flex items-center gap-3">
+                        <button data-id="${requestData.id}" data-vote="like" class="vote-btn text-gray-500 hover:text-green-600 transition">
+                            <i class="fas fa-thumbs-up"></i> <span class="like-count font-semibold">${requestData.likes || 0}</span>
+                        </button>
+                        <button data-id="${requestData.id}" data-vote="dislike" class="vote-btn text-gray-500 hover:text-red-600 transition">
+                            <i class="fas fa-thumbs-down"></i> <span class="dislike-count font-semibold">${requestData.dislikes || 0}</span>
+                        </button>
+                        <button data-id="${requestData.id}" class="report-btn bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold py-1 px-3 rounded-lg transition text-xs">
+                            <i class="fas fa-flag"></i> إبلاغ
+                        </button>
+                    </div>
+                </div>`;
+                dashboard.appendChild(card);
+                votesManager.updateCardUI(card);
             });
+            localStorage.setItem('lastVisitTimestamp', Date.now().toString());
+        });
+    };
+
+    // --- UI LOGIC (No changes) ---
+    const menuBtn = document.getElementById('menu-btn');
+    const closeBtn = document.getElementById('close-btn');
+    const sideBar = document.getElementById('side-bar');
+    const overlay = document.getElementById('overlay');
+    const openRequestModalBtn = document.getElementById('open-request-modal-btn');
+    const requestModal = document.getElementById('request-modal');
+    const messageModal = document.getElementById('message-modal');
+    const requestForm = document.getElementById('request-form');
+    const reportReasonModal = document.getElementById('report-reason-modal');
+    const reportReasonForm = document.getElementById('report-reason-form');
+    const reportRequestIdInput = document.getElementById('report-request-id');
+    const adminLoginBtn = document.getElementById('admin-login-btn');
+    const adminPasswordModal = document.getElementById('admin-password-modal');
+    const adminPasswordForm = document.getElementById('admin-password-form');
+    const adminPasswordInput = document.getElementById('admin-password');
+    const adminPasswordError = document.getElementById('admin-password-error');
+    const toggleAdminPasswordBtn = document.getElementById('toggle-admin-password');
+    const toggleMenu = () => {
+        sideBar.classList.toggle('-right-full'); sideBar.classList.toggle('right-0');
+        overlay.classList.toggle('active');
+    };
+    const toggleModal = (modal) => modal.classList.toggle('hidden');
+    menuBtn.addEventListener('click', toggleMenu);
+    closeBtn.addEventListener('click', toggleMenu);
+    overlay.addEventListener('click', toggleMenu);
+    openRequestModalBtn.addEventListener('click', () => toggleModal(requestModal));
+    requestForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = document.getElementById('submit-request-btn');
+        if (submitBtn.disabled) return;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'جاري الإرسال...';
+        const formData = new FormData(requestForm);
+        const data = {
+            bloodType: formData.get('bloodType'), hospital: formData.get('hospital'),
+            wilaya: formData.get('wilaya'), location: formData.get('location'),
+            phone1: formData.get('phone1'), details: formData.get('details'),
+            urgency: 'urgent', verified: false, reports: 0,
+            likes: 0, dislikes: 0, createdAt: serverTimestamp()
         };
-
-        // --- UI LOGIC ---
-        const menuBtn = document.getElementById('menu-btn');
-        const closeBtn = document.getElementById('close-btn');
-        const sideBar = document.getElementById('side-bar');
-        const overlay = document.getElementById('overlay');
-        const openRequestModalBtn = document.getElementById('open-request-modal-btn');
-        const requestModal = document.getElementById('request-modal');
-        const messageModal = document.getElementById('message-modal');
-        const requestForm = document.getElementById('request-form');
-        const reportReasonModal = document.getElementById('report-reason-modal');
-        const reportReasonForm = document.getElementById('report-reason-form');
-        const reportRequestIdInput = document.getElementById('report-request-id');
-        
-        // Admin Modal elements
-        const adminLoginBtn = document.getElementById('admin-login-btn');
-        const adminPasswordModal = document.getElementById('admin-password-modal');
-        const adminPasswordForm = document.getElementById('admin-password-form');
-        const adminPasswordInput = document.getElementById('admin-password');
-        const adminPasswordError = document.getElementById('admin-password-error');
-        // START: New element for password toggle
-        const toggleAdminPasswordBtn = document.getElementById('toggle-admin-password');
-
-
-        const toggleMenu = () => {
-            sideBar.classList.toggle('-right-full'); sideBar.classList.toggle('right-0');
-            overlay.classList.toggle('active');
-        };
-
-        const toggleModal = (modal) => modal.classList.toggle('hidden');
-        
-        menuBtn.addEventListener('click', toggleMenu);
-        closeBtn.addEventListener('click', toggleMenu);
-        overlay.addEventListener('click', toggleMenu);
-        
-        openRequestModalBtn.addEventListener('click', () => toggleModal(requestModal));
-        
-        // Handle form submission
-        requestForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const submitBtn = document.getElementById('submit-request-btn');
-            if (submitBtn.disabled) return;
-            
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'جاري الإرسال...';
-            
-            const formData = new FormData(requestForm);
-            const data = {
-                bloodType: formData.get('bloodType'),
-                hospital: formData.get('hospital'),
-                wilaya: formData.get('wilaya'),
-                location: formData.get('location'),
-                phone1: formData.get('phone1'),
-                details: formData.get('details'),
-                urgency: 'urgent',
-                verified: false,
-                reports: 0,
-                likes: 0,
-                dislikes: 0,
-                createdAt: serverTimestamp()
-            };
-
-            try {
-                await addDoc(collection(db, "donation_requests"), data);
-                toggleModal(requestModal);
-                requestForm.reset();
-                document.getElementById('message-text').textContent = 'تم إضافة طلبك بنجاح!';
-                document.getElementById('message-icon').className = 'fas fa-check-circle text-5xl text-green-500 mb-4';
-                toggleModal(messageModal);
-            } catch (error) {
-                console.error("Error adding document: ", error);
-                alert('حدث خطأ أثناء إرسال الطلب. الرجاء المحاولة مرة أخرى.');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'إرسال الطلب';
-            }
-        });
-        
-        // Dashboard click listener to handle report and vote buttons
-        dashboard.addEventListener('click', (e) => {
-            const reportBtn = e.target.closest('.report-btn');
-            const voteBtn = e.target.closest('.vote-btn');
-
-            if (reportBtn) {
-                const requestId = reportBtn.dataset.id;
-                reportRequestIdInput.value = requestId;
-                toggleModal(reportReasonModal);
-            } else if (voteBtn) {
-                const requestId = voteBtn.dataset.id;
-                const voteType = voteBtn.dataset.vote;
-                handleVote(requestId, voteType);
-            }
-        });
-        
-        // Handle report reason form submission
-        reportReasonForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const submitBtn = document.getElementById('submit-report-btn');
-            if (submitBtn.disabled) return;
-
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'جاري الإرسال...';
-
-            const requestId = reportRequestIdInput.value;
-            const reason = reportReasonForm.elements.reason.value;
-            const docRef = doc(db, 'donation_requests', requestId);
-
-            try {
-                await updateDoc(docRef, {
-                    reports: increment(1),
-                    reportReasons: arrayUnion(reason)
-                });
-                toggleModal(reportReasonModal);
-                reportReasonForm.reset();
-                document.getElementById('message-text').textContent = 'تم إرسال بلاغك بنجاح. سيتم مراجعته قريبًا. شكرًا لك.';
-                document.getElementById('message-icon').className = 'fas fa-flag text-5xl text-amber-500 mb-4';
-                toggleModal(messageModal);
-            } catch (error) {
-                console.error("Error submitting report: ", error);
-                alert('حدث خطأ أثناء إرسال البلاغ.');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'إرسال البلاغ';
-            }
-        });
-        
-        document.querySelectorAll('.close-modal-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => toggleModal(e.target.closest('.modal')));
-        });
-        
-        // --- ADMIN LOGIN LOGIC ---
-        adminLoginBtn.addEventListener('click', () => {
-            if (!sideBar.classList.contains('-right-full')) {
-                toggleMenu(); // Close sidebar if open
-            }
-            toggleModal(adminPasswordModal);
-            adminPasswordInput.focus();
-        });
-
-        adminPasswordForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const enteredPassword = adminPasswordInput.value;
-            const correctPassword = 'ADATSHIFAS22MARKETADMIN';
-
-            if (enteredPassword === correctPassword) {
-                window.location.href = 'dashboard.html';
-            } else {
-                adminPasswordError.classList.remove('hidden');
-                adminPasswordInput.classList.add('border-red-500');
-                adminPasswordForm.parentElement.classList.add('animate-shake'); // Simple shake animation
-                setTimeout(() => {
-                    adminPasswordError.classList.add('hidden');
-                    adminPasswordInput.classList.remove('border-red-500');
-                    adminPasswordInput.value = '';
-                    adminPasswordForm.parentElement.classList.remove('animate-shake');
-                }, 2000);
-            }
-        });
-        
-        // START: New logic for password visibility toggle
-        toggleAdminPasswordBtn.addEventListener('click', () => {
-            const isPassword = adminPasswordInput.type === 'password';
-            adminPasswordInput.type = isPassword ? 'text' : 'password';
-            const icon = toggleAdminPasswordBtn.querySelector('i');
-            icon.classList.toggle('fa-eye');
-            icon.classList.toggle('fa-eye-slash');
-        });
-        // END: New logic for password visibility toggle
-
-
-        // --- Initialize Everything ---
-        setupSoundActivation();
-        fetchAndDisplayRequests();
-    </script>
+        try {
+            await addDoc(collection(db, "donation_requests"), data);
+            toggleModal(requestModal);
+            requestForm.reset();
+            document.getElementById('message-text').textContent = 'تم إضافة طلبك بنجاح!';
+            document.getElementById('message-icon').className = 'fas fa-check-circle text-5xl text-green-500 mb-4';
+            toggleModal(messageModal);
+        } catch (error) {
+            console.error("Error adding document: ", error);
+            alert('حدث خطأ أثناء إرسال الطلب. الرجاء المحاولة مرة أخرى.');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'إرسال الطلب';
+        }
+    });
+    dashboard.addEventListener('click', (e) => {
+        const reportBtn = e.target.closest('.report-btn');
+        const voteBtn = e.target.closest('.vote-btn');
+        if (reportBtn) {
+            const requestId = reportBtn.dataset.id;
+            reportRequestIdInput.value = requestId;
+            toggleModal(reportReasonModal);
+        } else if (voteBtn) {
+            const requestId = voteBtn.dataset.id;
+            const voteType = voteBtn.dataset.vote;
+            handleVote(requestId, voteType);
+        }
+    });
+    reportReasonForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = document.getElementById('submit-report-btn');
+        if (submitBtn.disabled) return;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'جاري الإرسال...';
+        const requestId = reportRequestIdInput.value;
+        const reason = reportReasonForm.elements.reason.value;
+        const docRef = doc(db, 'donation_requests', requestId);
+        try {
+            await updateDoc(docRef, { reports: increment(1), reportReasons: arrayUnion(reason) });
+            toggleModal(reportReasonModal);
+            reportReasonForm.reset();
+            document.getElementById('message-text').textContent = 'تم إرسال بلاغك بنجاح. سيتم مراجعته قريبًا. شكرًا لك.';
+            document.getElementById('message-icon').className = 'fas fa-flag text-5xl text-amber-500 mb-4';
+            toggleModal(messageModal);
+        } catch (error) {
+            console.error("Error submitting report: ", error);
+            alert('حدث خطأ أثناء إرسال البلاغ.');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'إرسال البلاغ';
+        }
+    });
+    document.querySelectorAll('.close-modal-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => toggleModal(e.target.closest('.modal')));
+    });
+    adminLoginBtn.addEventListener('click', () => {
+        if (!sideBar.classList.contains('-right-full')) { toggleMenu(); }
+        toggleModal(adminPasswordModal);
+        adminPasswordInput.focus();
+    });
+    adminPasswordForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const enteredPassword = adminPasswordInput.value;
+        const correctPassword = 'ADATSHIFAS22MARKETADMIN';
+        if (enteredPassword === correctPassword) {
+            window.location.href = 'dashboard.html';
+        } else {
+            adminPasswordError.classList.remove('hidden');
+            adminPasswordInput.classList.add('border-red-500');
+            adminPasswordForm.parentElement.classList.add('animate-shake');
+            setTimeout(() => {
+                adminPasswordError.classList.add('hidden');
+                adminPasswordInput.classList.remove('border-red-500');
+                adminPasswordInput.value = '';
+                adminPasswordForm.parentElement.classList.remove('animate-shake');
+            }, 2000);
+        }
+    });
+    toggleAdminPasswordBtn.addEventListener('click', () => {
+        const isPassword = adminPasswordInput.type === 'password';
+        adminPasswordInput.type = isPassword ? 'text' : 'password';
+        const icon = toggleAdminPasswordBtn.querySelector('i');
+        icon.classList.toggle('fa-eye');
+        icon.classList.toggle('fa-eye-slash');
+    });
+    // --- Initialize Everything ---
+    setupSoundActivation();
+    fetchAndDisplayRequests();
+</script>
 </body>
 </html>
