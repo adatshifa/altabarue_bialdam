@@ -127,6 +127,12 @@
             if (data.urgency === 'urgent') { urgencyText = 'عاجل جداً'; urgencyClass = 'bg-rose-100 text-rose-800'; }
             else { urgencyText = 'غير مستعجل'; urgencyClass = 'bg-green-100 text-green-800'; }
             document.title = `طلب تبرع: ${data.bloodType} في ${data.hospital} - أداة شفاء`;
+            
+            const shareUrl = window.location.href;
+            const shareText = `🚨 *طلب تبرع دم عاجل* 🚨\n\n*الفصيلة المطلوبة:* ${data.bloodType}\n*المستشفى:* ${data.hospital}, ${data.wilaya}\n*للتواصل المباشر:* ${data.phone1}\n\n*لمزيد من التفاصيل عبر الرابط:*\n${shareUrl}`;
+            const whatsappLink = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+            const telegramLink = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
+
             requestDetailsContainer.innerHTML = `
                 <div id="request-card" class="bg-white p-6 sm:p-8 rounded-2xl details-card overflow-hidden">
                     <div class="flex justify-between items-center pb-4 border-b">
@@ -143,7 +149,19 @@
                         <div class="flex items-start gap-3"><i class="fas fa-hospital text-2xl text-gray-400 mt-1"></i>
                             <div><h3 class="text-lg font-bold text-gray-800 ${data.verified ? 'verified' : ''}">${data.hospital}</h3><p class="text-gray-600">${data.wilaya}, ${data.location}</p></div>
                         </div>
-                        <div class="flex items-center gap-3"><i class="fas fa-phone text-2xl text-gray-400"></i><a href="tel:${data.phone1}" class="text-blue-600 text-xl font-semibold tracking-wider hover:underline" dir="ltr">${data.phone1}</a></div>
+                        <div class="flex items-center gap-3"><i class="fas fa-phone text-2xl text-gray-400"></i><span class="text-blue-600 text-xl font-semibold tracking-wider" dir="ltr">${data.phone1}</span></div>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2">
+                           <a href="tel:${data.phone1}" class="flex items-center justify-center gap-2 p-3 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-all font-semibold">
+                               <i class="fas fa-phone-alt"></i><span>اتصال</span>
+                           </a>
+                           <a href="${whatsappLink}" target="_blank" class="flex items-center justify-center gap-2 p-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all font-semibold">
+                               <i class="fab fa-whatsapp"></i><span>واتساب</span>
+                           </a>
+                           <a href="${telegramLink}" target="_blank" class="flex items-center justify-center gap-2 p-3 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-all font-semibold">
+                               <i class="fab fa-telegram-plane"></i><span>تيليجرام</span>
+                           </a>
+                        </div>
                         <div class="flex items-center gap-3"><i class="fas fa-exclamation-circle text-2xl text-gray-400"></i><span class="text-sm font-semibold px-3 py-1 rounded-full ${urgencyClass}">${urgencyText}</span></div>
                     </div>
                     <div class="mt-6 pt-4 border-t text-sm text-gray-500">
