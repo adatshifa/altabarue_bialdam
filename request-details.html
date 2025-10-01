@@ -25,7 +25,6 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             text-align: center;
         }
-        /* --- نظام الإشعارات المحسّن --- */
         #toast-notification {
             position: fixed;
             bottom: -100px;
@@ -91,6 +90,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // Votre configuration Firebase reste inchangée
         const firebaseConfig = {
           apiKey: "AIzaSyBjGbfd-myjqLtqvdMp4b-h4LIaeZjfUto",
           authDomain: "altabarue-bialdam.firebaseapp.com",
@@ -113,7 +113,6 @@
 
         let requestDataForShare = {};
 
-        // دالة لإظهار الإشعارات الأنيقة
         const showToast = (message) => {
             toast.textContent = message;
             toast.classList.add('show');
@@ -124,10 +123,7 @@
 
         const escapeHTML = str => str ? str.replace(/[&<>"']/g, match => ({'&': '&amp;','<': '&lt;','>': '&gt;','"': '&quot;',"'": '&#39;'})[match]) : '';
 
-        const getRequestId = () => {
-            const params = new URLSearchParams(window.location.search);
-            return params.get('id');
-        };
+        const getRequestId = () => new URLSearchParams(window.location.search).get('id');
 
         const fetchRequestDetails = async (id) => {
             if (!id) {
@@ -209,25 +205,29 @@
             loader.innerHTML = `<div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg" role="alert"><p class="font-bold">حدث خطأ</p><p>${message}</p></div>`;
         };
         
-        // دالة لإنشاء الصورة بجودة عالية
-        const generateImageBlob = async () => {
+        /**
+         * Génère un objet 'canvas' à partir de la carte de la demande.
+         * C'est la partie la plus coûteuse en ressources, donc nous la centralisons.
+         * @returns {Promise<HTMLCanvasElement|null>}
+         */
+        const generateCanvasFromCard = async () => {
              const card = document.getElementById('request-card');
-             if (card) {
-                const qrCode = card.querySelector('#qrcode-wrapper');
-                if (qrCode) qrCode.style.visibility = 'hidden';
-                
-                const canvas = await html2canvas(card, {
-                    backgroundColor: '#ffffff', // خلفية بيضاء لضمان الجودة
-                    scale: 2 // زيادة الدقة للحصول على صورة أوضح
-                });
+             if (!card) return null;
 
-                if (qrCode) qrCode.style.visibility = 'visible';
-                return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-             }
-             return null;
+             const qrCode = card.querySelector('#qrcode-wrapper');
+             if (qrCode) qrCode.style.visibility = 'hidden';
+             
+             const canvas = await html2canvas(card, {
+                 scale: 2, // Augmente la résolution pour une meilleure qualité
+                 backgroundColor: '#ffffff',
+                 useCORS: true
+             });
+
+             if (qrCode) qrCode.style.visibility = 'visible';
+             return canvas;
         };
 
-        // --- منطق الأزرار ---
+        // --- Logique des boutons ---
 
         copyLinkBtn.addEventListener('click', () => {
             navigator.clipboard.writeText(window.location.href).then(() => {
@@ -238,25 +238,38 @@
             });
         });
 
+        /**
+         * Bouton de TÉLÉCHARGEMENT : Utilise une Data URL pour une compatibilité maximale avec WebView.
+         */
         downloadBtn.addEventListener('click', async () => {
             const originalText = downloadBtn.innerHTML;
             downloadBtn.innerHTML = '<span><i class="fas fa-spinner fa-spin mr-2"></i>جاري التجهيز...</span>';
             downloadBtn.disabled = true;
             
             showToast('بدأ تجهيز الصورة للتحميل...');
-            const blob = await generateImageBlob();
-            if(blob){
-                // هذه الطريقة هي الأمثل لتعمل داخل WebView
-                const link = document.createElement('a');
-                link.download = `shifaa-request-${getRequestId() || 'file'}.png`;
-                link.href = URL.createObjectURL(blob);
-                link.click();
-                URL.revokeObjectURL(link.href);
-            } else {
+            try {
+                const canvas = await generateCanvasFromCard();
+                if (canvas) {
+                    // Convertit le canvas en Data URL (base64)
+                    const imageURL = canvas.toDataURL('image/png');
+                    
+                    // Crée un lien, définit la Data URL comme sa source, et le clique
+                    const link = document.createElement('a');
+                    link.download = `shifaa-request-${getRequestId() || 'file'}.png`;
+                    link.href = imageURL;
+                    document.body.appendChild(link); // Requis pour la compatibilité
+                    link.click();
+                    document.body.removeChild(link); // Nettoyage
+                } else {
+                    throw new Error("La génération du canvas a échoué.");
+                }
+            } catch (err) {
+                console.error('Download failed:', err);
                 showToast('حدث خطأ أثناء إنشاء الصورة.');
+            } finally {
+                downloadBtn.innerHTML = originalText;
+                downloadBtn.disabled = false;
             }
-            downloadBtn.innerHTML = originalText;
-            downloadBtn.disabled = false;
         });
         
         shareLinkBtn.addEventListener('click', async () => {
@@ -265,12 +278,10 @@
                 text: `حالة بحاجة ماسة للتبرع بالدم، فصيلة: ${requestDataForShare.bloodType} في ${requestDataForShare.hospital}`,
                 url: window.location.href
             };
-            // navigator.share ستفتح نافذة المشاركة الأصلية في أندرويد
             try {
                 if (navigator.share) {
                     await navigator.share(shareData);
                 } else {
-                    // كخطة بديلة للمتصفحات التي لا تدعم المشاركة
                     navigator.clipboard.writeText(window.location.href);
                     showToast('تم نسخ الرابط! يمكنك الآن مشاركته.');
                 }
@@ -280,30 +291,36 @@
             }
         });
 
+        /**
+         * Bouton de PARTAGE D'IMAGE : Utilise l'API Web Share moderne et se rabat sur le téléchargement.
+         */
         shareImageBtn.addEventListener('click', async () => {
             const originalText = shareImageBtn.innerHTML;
             shareImageBtn.innerHTML = '<span><i class="fas fa-spinner fa-spin mr-2"></i>جاري التجهيز...</span>';
             shareImageBtn.disabled = true;
 
             try {
-                const blob = await generateImageBlob();
-                if(!blob) throw new Error("Could not generate image blob.");
+                const canvas = await generateCanvasFromCard();
+                if(!canvas) throw new Error("Impossible de générer le canvas.");
+
+                // L'API de partage nécessite un "blob", nous le créons donc à partir du canvas
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                if(!blob) throw new Error("Impossible de convertir le canvas en blob.");
 
                 const file = new File([blob], `shifaa-request-${getRequestId() || 'file'}.png`, { type: 'image/png' });
-
                 const shareData = {
                     title: 'طلب تبرع بالدم عاجل',
                     text: `حالة عاجلة، فصيلة: ${requestDataForShare.bloodType}\nالمستشفى: ${requestDataForShare.hospital}\nللتفاصيل: ${window.location.href}`,
                     files: [file]
                 };
 
-                // التأكد من أن المتصفح (أو الويب فيو) يدعم مشاركة الملفات
+                // Vérifie si le partage de fichiers est pris en charge
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
                     await navigator.share(shareData);
                 } else {
-                    // كخطة بديلة، سيتم تحميل الصورة بدلاً من مشاركتها مباشرة
-                    showToast('المتصفح لا يدعم مشاركة الصور، سيتم تحميلها بدلاً من ذلك.');
-                    downloadBtn.click();
+                    // Solution de repli robuste : informe l'utilisateur et déclenche le téléchargement
+                    showToast('مشاركة الصور غير مدعومة، سيتم تحميل الصورة بدلاً من ذلك.');
+                    downloadBtn.click(); // Utilise notre nouvelle fonction de téléchargement fiable
                 }
             } catch (err) {
                 console.error("Image share failed:", err);
