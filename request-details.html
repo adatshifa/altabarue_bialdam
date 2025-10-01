@@ -69,13 +69,10 @@
 
         <div id="action-buttons" class="hidden max-w-2xl mx-auto mt-8">
              <p class="text-center font-bold text-gray-700 mb-4 text-lg">شارك أو تواصل مباشرة:</p>
-            <div id="share-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div id="share-grid" class="grid grid-cols-2 gap-4">
                 <a id="call-btn" href="#" class="action-btn bg-teal-500 hover:bg-teal-600"><i class="fas fa-phone-alt"></i><span class="font-semibold">اتصال هاتفي</span></a>
-                <a id="sms-btn" href="#" class="action-btn bg-orange-500 hover:bg-orange-600"><i class="fas fa-sms"></i><span class="font-semibold">رسالة SMS</span></a>
-                
                 <a href="#" data-share-app="whatsapp" class="action-btn bg-green-500 hover:bg-green-600"><i class="fab fa-whatsapp"></i><span class="font-semibold">واتساب</span></a>
                 <a href="#" data-share-app="facebook" class="action-btn bg-blue-600 hover:bg-blue-700"><i class="fab fa-facebook"></i><span class="font-semibold">فيسبوك</span></a>
-                <a href="#" data-share-app="messenger" class="action-btn bg-sky-500 hover:bg-sky-600"><i class="fab fa-facebook-messenger"></i><span class="font-semibold">ماسنجر</span></a>
                 <a href="#" data-share-app="telegram" class="action-btn bg-sky-500 hover:bg-sky-600"><i class="fab fa-telegram"></i><span class="font-semibold">تليجرام</span></a>
             </div>
             <p class="text-center text-xs text-gray-500 mt-4">عند المشاركة، سيتم تجهيز نص ورابط لمشاركته.</p>
@@ -163,9 +160,8 @@
                     </div>
                 </div>`;
             
-            const shareTextForSms = `طلب تبرع عاجل بفصيلة ${data.bloodType} في مستشفى ${data.hospital}, ${data.wilaya}. للتواصل: ${data.phone1}. رابط التفاصيل: ${window.location.href}`;
+            // تم حذف كود زر SMS
             document.getElementById('call-btn').href = `tel:${data.phone1}`;
-            document.getElementById('sms-btn').href = `sms:${data.phone1}?body=${encodeURIComponent(shareTextForSms)}`;
 
             loader.classList.add('hidden');
             requestDetailsContainer.classList.remove('hidden');
@@ -189,7 +185,6 @@
                 const shareUrl = window.location.href;
                 const shareText = `🚨 *طلب تبرع دم عاجل* 🚨\n\n*الفصيلة المطلوبة:* ${requestData.bloodType}\n*المستشفى:* ${requestData.hospital}, ${requestData.wilaya}\n*للتواصل المباشر:* ${requestData.phone1}\n\n*لمزيد من التفاصيل عبر الرابط:*\n${shareUrl}`;
 
-                // For mobile, use the native share API, which is the best option
                 if (navigator.share) {
                     await navigator.share({
                         title: shareTitle,
@@ -197,33 +192,29 @@
                         url: shareUrl,
                     });
                 } else {
-                    // --- START: MODIFIED DESKTOP SHARING LOGIC ---
-                    // For desktop, try to open the app directly using URL protocols
                     const app = button.dataset.shareApp;
                     const encodedUrl = encodeURIComponent(shareUrl);
-                    const encodedText = encodeURIComponent(shareText);
                     let fallbackUrl;
 
                     switch (app) {
                         case 'facebook':
-                            // Facebook has no reliable app protocol for sharing, so we use the web sharer
-                            fallbackUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodeURIComponent(`طلب تبرع عاجل بفصيلة ${requestData.bloodType}`)}`;
+                            // رسالة فيسبوك محسّنة
+                            const facebookQuote = `🚨 نداء عاجل للتبرع بالدم 🚨\n\nالفصيلة المطلوبة: ${requestData.bloodType}\nالمكان: ${requestData.hospital}, ${requestData.wilaya}\nللتواصل وإنقاذ حياة: ${requestData.phone1}\n\nالرجاء المشاركة على أوسع نطاق!`;
+                            fallbackUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodeURIComponent(facebookQuote)}`;
                             window.open(fallbackUrl, '_blank', 'popup=true');
                             break;
                         case 'whatsapp':
-                            fallbackUrl = `whatsapp://send?text=${encodedText}`;
+                            const encodedWhatsAppText = encodeURIComponent(shareText);
+                            fallbackUrl = `whatsapp://send?text=${encodedWhatsAppText}`;
                             window.open(fallbackUrl);
                             break;
                         case 'telegram':
-                            fallbackUrl = `tg://msg_url?url=${encodedUrl}&text=${encodeURIComponent(shareTitle)}`;
+                             // رسالة تليجرام محسّنة
+                            const telegramText = `🚨 *نداء عاجل للتبرع بالدم* 🚨\n\n*الفصيلة:* ${requestData.bloodType}\n*المكان:* ${requestData.hospital}, ${requestData.wilaya}\n*للتواصل:* ${requestData.phone1}`;
+                            fallbackUrl = `tg://msg_url?url=${encodedUrl}&text=${encodeURIComponent(telegramText)}`;
                             window.open(fallbackUrl);
                             break;
-                        case 'messenger':
-                             fallbackUrl = `fb-messenger://share?link=${encodedUrl}`;
-                             window.open(fallbackUrl);
-                             break;
                     }
-                    // --- END: MODIFIED DESKTOP SHARING LOGIC ---
                 }
             } catch (err) {
                 if (err.name !== 'AbortError') {
