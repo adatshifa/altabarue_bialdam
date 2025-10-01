@@ -22,30 +22,26 @@
             text-align: center;
         }
         #toast-notification.show { bottom: 30px; }
-        .action-btn {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            color: white;
-            text-decoration: none;
-            transition: all 0.2s ease-in-out;
+
+        /* --- [بداية] شيفرة النافذة المنبثقة المضافة --- */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+
+        .modal-backdrop {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); z-index: 1000;
+            display: flex; align-items: center; justify-content: center;
+            animation: fadeIn 0.3s; padding: 1rem; backdrop-filter: blur(5px);
         }
-        .action-btn:hover {
-             transform: translateY(-4px);
-             box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        .modal-content {
+            background-color: #ffffff;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            width: 100%; max-width: 500px; max-height: 95vh;
+            display: flex; flex-direction: column; overflow: hidden;
+            animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); position: relative;
+            border-radius: 1rem;
         }
-        .action-btn i { font-size: 2.25rem; }
-        .action-btn span { font-weight: 600; }
-        .action-btn.loading {
-            background-color: #9ca3af !important;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
+        /* --- [نهاية] شيفرة النافذة المنبثقة --- */
     </style>
 </head>
 <body>
@@ -67,18 +63,14 @@
             <div id="request-details" class="hidden"></div>
         </div>
 
-        <div id="action-buttons" class="hidden max-w-2xl mx-auto mt-8">
-             <p class="text-center font-bold text-gray-700 mb-4 text-lg">شارك أو تواصل مباشرة:</p>
-            <div id="share-grid" class="grid grid-cols-2 gap-4">
-                <a id="call-btn" href="#" class="action-btn bg-teal-500 hover:bg-teal-600"><i class="fas fa-phone-alt"></i><span class="font-semibold">اتصال هاتفي</span></a>
-                <a href="#" data-share-app="whatsapp" class="action-btn bg-green-500 hover:bg-green-600"><i class="fab fa-whatsapp"></i><span class="font-semibold">واتساب</span></a>
-                <a href="#" data-share-app="facebook" class="action-btn bg-blue-600 hover:bg-blue-700"><i class="fab fa-facebook"></i><span class="font-semibold">فيسبوك</span></a>
-                <a href="#" data-share-app="telegram" class="action-btn bg-sky-500 hover:bg-sky-600"><i class="fab fa-telegram"></i><span class="font-semibold">تليجرام</span></a>
-            </div>
-            <p class="text-center text-xs text-gray-500 mt-4">عند المشاركة، سيتم تجهيز نص ورابط لمشاركته.</p>
+        <div id="action-buttons" class="hidden max-w-2xl mx-auto mt-8 text-center">
+            <button id="show-share-modal-btn" class="w-full max-w-sm mx-auto bg-teal-600 text-white font-bold py-4 px-6 rounded-xl text-xl hover:bg-teal-700 transition-transform transform hover:scale-105 shadow-lg">
+                <i class="fas fa-share-alt mr-2"></i> مشاركة النداء
+            </button>
         </div>
     </main>
-
+    
+    <div id="modal-container"></div>
     <div id="toast-notification"></div>
 
     <script type="module">
@@ -100,10 +92,9 @@
         const requestDetailsContainer = document.getElementById('request-details');
         const actionButtons = document.getElementById('action-buttons');
         const toast = document.getElementById('toast-notification');
-        const shareGrid = document.getElementById('share-grid');
+        const modalContainer = document.getElementById('modal-container');
 
         let requestData = {};
-        let isSharing = false;
 
         const showToast = (message) => {
             toast.textContent = message;
@@ -160,81 +151,57 @@
                     </div>
                 </div>`;
             
-            // تم حذف كود زر SMS
-            document.getElementById('call-btn').href = `tel:${data.phone1}`;
-
             loader.classList.add('hidden');
             requestDetailsContainer.classList.remove('hidden');
             actionButtons.classList.remove('hidden');
+
+            // [إضافة] ربط الزر الجديد بالنافذة
+            document.getElementById('show-share-modal-btn').onclick = showShareModal;
         };
 
         const showError = (message) => {
             loader.innerHTML = `<div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg" role="alert"><p class="font-bold">حدث خطأ</p><p>${message}</p></div>`;
         };
         
-        const initiateShare = async (button) => {
-            if (isSharing) return;
-            isSharing = true;
+        // --- [بداية] وظيفة النافذة المنبثقة الجديدة ---
+        function showShareModal() {
+            const shareUrl = window.location.href;
+            const shareText = `🚨 *طلب تبرع دم عاجل* 🚨\n\n*الفصيلة المطلوبة:* ${requestData.bloodType}\n*المستشفى:* ${requestData.hospital}, ${requestData.wilaya}\n*للتواصل المباشر:* ${requestData.phone1}\n\n*لمزيد من التفاصيل عبر الرابط:*\n${shareUrl}`;
+            const encodedShareText = encodeURIComponent(shareText);
+            const phoneNumber = requestData.phone1.replace(/\D/g, '');
+
+            const facebookQuote = `🚨 نداء عاجل للتبرع بالدم 🚨\n\nالفصيلة المطلوبة: ${requestData.bloodType}\nالمكان: ${requestData.hospital}, ${requestData.wilaya}\nللتواصل وإنقاذ حياة: ${requestData.phone1}\n\nالرجاء المشاركة على أوسع نطاق!`;
+            const encodedFacebookQuote = encodeURIComponent(facebookQuote);
+            const encodedUrl = encodeURIComponent(shareUrl);
+
+            const modalHTML = `
+            <div class="modal-backdrop" id="modal-backdrop-share">
+                <div class="modal-content">
+                    <div class="p-5 border-b flex justify-between items-center">
+                        <h2 class="text-xl font-bold"><i class="fas fa-share-alt mr-2 text-teal-500"></i> شارك لإنقاذ حياة</h2>
+                        <button id="modal-close-btn-share" class="text-2xl hover:text-red-500">&times;</button>
+                    </div>
+                    <div class="p-5 text-center">
+                        <p class="mb-6 text-gray-700">اختر إحدى الوسائل التالية للتواصل المباشر أو لمشاركة نداء التبرع. مساهمتك قد تنقذ حياة.</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <a href="tel:${phoneNumber}" class="flex flex-col items-center justify-center gap-2 p-4 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-all"><i class="fas fa-phone-alt text-3xl"></i><span class="font-semibold">اتصال هاتفي</span></a>
+                            <a href="https://wa.me/${phoneNumber}?text=${encodedShareText}" target="_blank" class="flex flex-col items-center justify-center gap-2 p-4 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all"><i class="fab fa-whatsapp text-3xl"></i><span class="font-semibold">واتساب</span></a>
+                            <a href="tg://msg_url?url=${encodedUrl}&text=${encodedShareText}" target="_blank" class="flex flex-col items-center justify-center gap-2 p-4 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-all"><i class="fab fa-telegram text-3xl"></i><span class="font-semibold">تليجرام</span></a>
+                            <a href="https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedFacebookQuote}" target="_blank" class="flex flex-col items-center justify-center gap-2 p-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all"><i class="fab fa-facebook text-3xl"></i><span class="font-semibold">فيسبوك</span></a>
+                            <a href="sms:${phoneNumber}?body=${encodedShareText}" class="col-span-2 flex flex-col items-center justify-center gap-2 p-4 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all"><i class="fas fa-sms text-3xl"></i><span class="font-semibold">رسالة SMS</span></a>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
             
-            const originalContent = button.innerHTML;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin text-3xl"></i><span class="font-semibold">تجهيز...</span>';
-            button.classList.add('loading');
-
-            try {
-                const shareTitle = `طلب تبرع عاجل: ${requestData.bloodType}`;
-                const shareUrl = window.location.href;
-                const shareText = `🚨 *طلب تبرع دم عاجل* 🚨\n\n*الفصيلة المطلوبة:* ${requestData.bloodType}\n*المستشفى:* ${requestData.hospital}, ${requestData.wilaya}\n*للتواصل المباشر:* ${requestData.phone1}\n\n*لمزيد من التفاصيل عبر الرابط:*\n${shareUrl}`;
-
-                if (navigator.share) {
-                    await navigator.share({
-                        title: shareTitle,
-                        text: shareText,
-                        url: shareUrl,
-                    });
-                } else {
-                    const app = button.dataset.shareApp;
-                    const encodedUrl = encodeURIComponent(shareUrl);
-                    let fallbackUrl;
-
-                    switch (app) {
-                        case 'facebook':
-                            // رسالة فيسبوك محسّنة
-                            const facebookQuote = `🚨 نداء عاجل للتبرع بالدم 🚨\n\nالفصيلة المطلوبة: ${requestData.bloodType}\nالمكان: ${requestData.hospital}, ${requestData.wilaya}\nللتواصل وإنقاذ حياة: ${requestData.phone1}\n\nالرجاء المشاركة على أوسع نطاق!`;
-                            fallbackUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodeURIComponent(facebookQuote)}`;
-                            window.open(fallbackUrl, '_blank', 'popup=true');
-                            break;
-                        case 'whatsapp':
-                            const encodedWhatsAppText = encodeURIComponent(shareText);
-                            fallbackUrl = `whatsapp://send?text=${encodedWhatsAppText}`;
-                            window.open(fallbackUrl);
-                            break;
-                        case 'telegram':
-                             // رسالة تليجرام محسّنة
-                            const telegramText = `🚨 *نداء عاجل للتبرع بالدم* 🚨\n\n*الفصيلة:* ${requestData.bloodType}\n*المكان:* ${requestData.hospital}, ${requestData.wilaya}\n*للتواصل:* ${requestData.phone1}`;
-                            fallbackUrl = `tg://msg_url?url=${encodedUrl}&text=${encodeURIComponent(telegramText)}`;
-                            window.open(fallbackUrl);
-                            break;
-                    }
-                }
-            } catch (err) {
-                if (err.name !== 'AbortError') {
-                    console.error('Share failed:', err);
-                    showToast('فشلت عملية المشاركة.');
-                }
-            } finally {
-                isSharing = false;
-                button.innerHTML = originalContent;
-                button.classList.remove('loading');
-            }
-        };
-
-        shareGrid.addEventListener('click', (event) => {
-            const shareButton = event.target.closest('a[data-share-app]');
-            if (shareButton) {
-                event.preventDefault();
-                initiateShare(shareButton);
-            }
-        });
+            modalContainer.innerHTML = modalHTML;
+            const close = () => { modalContainer.innerHTML = ''; };
+            document.getElementById('modal-close-btn-share').onclick = close;
+            document.getElementById('modal-backdrop-share').onclick = (e) => { 
+                if (e.target.id === 'modal-backdrop-share') close(); 
+            };
+        }
+        // --- [نهاية] وظيفة النافذة المنبثقة ---
         
         fetchRequestDetails(getRequestId());
     </script>
