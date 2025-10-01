@@ -222,7 +222,6 @@
             </div>
         </div>
     </div>
-
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, query, doc, updateDoc, increment, arrayUnion, limit, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -240,7 +239,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     
-    // --- START: NOTIFICATION SYSTEM LOGIC (IMPROVED) ---
+    // --- START: NOTIFICATION SYSTEM LOGIC ---
     let newRequestCount = 0;
     let originalTitle = document.title;
     let titleInterval = null;
@@ -276,12 +275,18 @@
     document.getElementById('mute-btn').onclick = () => audioManager.toggleMute();
     // --- END: NOTIFICATION SYSTEM LOGIC ---
 
-    // --- START: VOTING SYSTEM LOGIC (IMPROVED) ---
+    // =================================================================
+    // =========== START: UNIFIED VOTING LOGIC (FINAL SOLUTION) ========
+    // =================================================================
     const votesManager = {
         votes: JSON.parse(localStorage.getItem('shifaa-votes')) || {},
         getVote(requestId) { return this.votes[requestId]; },
         setVote(requestId, voteType) {
-            this.votes[requestId] = voteType;
+            if (voteType === null) {
+                delete this.votes[requestId];
+            } else {
+                this.votes[requestId] = voteType;
+            }
             localStorage.setItem('shifaa-votes', JSON.stringify(this.votes));
         },
         updateCardUI(cardElement) {
@@ -306,49 +311,43 @@
         const docRef = doc(db, 'donation_requests', requestId);
         const currentVote = votesManager.getVote(requestId);
 
+        // If user clicks the same button again, do nothing.
         if (currentVote === voteType) return;
         
-        // --- Optimistic UI Update (Counts + Color) ---
+        // Optimistically update the UI for instant feedback
+        votesManager.setVote(requestId, voteType);
         const cardElement = document.querySelector(`.vote-btn[data-id="${requestId}"]`).closest('.bg-white');
         if (cardElement) {
-            const likeCountSpan = cardElement.querySelector('.like-count');
-            const dislikeCountSpan = cardElement.querySelector('.dislike-count');
-            let likeCount = parseInt(likeCountSpan.textContent);
-            let dislikeCount = parseInt(dislikeCountSpan.textContent);
-
-            if (currentVote === 'like') likeCount--;
-            else if (currentVote === 'dislike') dislikeCount--;
-            
-            if (voteType === 'like') likeCount++;
-            else if (voteType === 'dislike') dislikeCount++;
-
-            likeCountSpan.textContent = likeCount;
-            dislikeCountSpan.textContent = dislikeCount;
+           votesManager.updateCardUI(cardElement);
         }
 
-        votesManager.setVote(requestId, voteType);
-        if (cardElement) votesManager.updateCardUI(cardElement);
-
-        // --- Database Update ---
+        // Prepare database updates
         const updates = {};
-        updates[`${voteType}s`] = increment(1);
+        updates[`${voteType}s`] = increment(1); // Increment the new vote
+        
+        // If there was a previous vote, decrement the old one
         if (currentVote) {
             const oppositeVoteType = currentVote === 'like' ? 'dislikes' : 'likes';
             updates[oppositeVoteType] = increment(-1);
         }
         
+        // Send updates to Firebase
         try {
             await updateDoc(docRef, updates);
+            // onSnapshot will handle updating the vote counts automatically
         } catch (error) {
             console.error("Error processing vote: ", error);
-            // Revert local storage and UI if the database update fails
+            // If the update fails, revert the optimistic UI change
             votesManager.setVote(requestId, currentVote); 
-            if (cardElement) votesManager.updateCardUI(cardElement);
-            // NOTE: Reverting the count optimistically is complex and often not worth it for non-critical features.
-            // The next data refresh from Firestore will correct the count anyway.
+             if (cardElement) {
+                votesManager.updateCardUI(cardElement);
+             }
+             alert("حدث خطأ أثناء تسجيل تصويتك. الرجاء المحاولة مرة أخرى.");
         }
     }
-    // --- END: VOTING SYSTEM LOGIC ---
+    // =================================================================
+    // =========== END: UNIFIED VOTING LOGIC (FINAL SOLUTION) ==========
+    // =================================================================
 
     // --- FIREBASE & DATA DISPLAY LOGIC ---
     const dashboard = document.getElementById('dashboard');
@@ -366,25 +365,31 @@
 
         onSnapshot(q, (snapshot) => {
             const fetchedRequests = [];
-            snapshot.forEach(doc => fetchedRequests.push({ id: doc.id, ...doc.data() }));
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added' || change.type === 'modified') {
+                    fetchedRequests.push({ id: change.doc.id, ...change.doc.data() });
+                }
+            });
 
             const newlyAddedRequests = [];
             if (isInitialLoad) {
-                fetchedRequests.forEach(req => knownRequestIds.add(req.id));
+                snapshot.docs.forEach(doc => knownRequestIds.add(doc.id));
                 isInitialLoad = false;
             } else {
-                fetchedRequests.forEach(req => {
-                    if (!knownRequestIds.has(req.id)) {
-                        newlyAddedRequests.push(req);
-                        knownRequestIds.add(req.id);
+                 snapshot.docChanges().forEach((change) => {
+                    if (change.type === 'added' && !knownRequestIds.has(change.doc.id)) {
+                        newlyAddedRequests.push({ id: change.doc.id, ...change.doc.data() });
+                        knownRequestIds.add(change.doc.id);
                     }
                 });
             }
 
             dashboard.innerHTML = '';
-            if (fetchedRequests.length === 0) { dashboard.innerHTML = `<div class="text-center p-10 bg-white rounded-xl custom-shadow-lg md:col-span-3"><p class="text-gray-500 text-xl">لا توجد حالات حالياً.</p></div>`; return; }
+            const allDocs = snapshot.docs;
+            if (allDocs.length === 0) { dashboard.innerHTML = `<div class="text-center p-10 bg-white rounded-xl custom-shadow-lg md:col-span-3"><p class="text-gray-500 text-xl">لا توجد حالات حالياً.</p></div>`; return; }
             
-            fetchedRequests.forEach((requestData) => {
+            allDocs.forEach((doc) => {
+                const requestData = { id: doc.id, ...doc.data() };
                 const card = document.createElement('div');
                 const requestDate = requestData.createdAt ? requestData.createdAt.toDate() : new Date();
                 const isUnseen = lastVisitTimestamp && requestDate.getTime() > lastVisitTimestamp;
@@ -415,7 +420,7 @@
                     </div>
                 </div>`;
                 dashboard.appendChild(card);
-                votesManager.updateCardUI(card);
+                votesManager.updateCardUI(card); // Apply correct vote style after rendering
             });
 
             if (newlyAddedRequests.length > 0) {
@@ -433,7 +438,7 @@
         });
     };
 
-    // --- UI LOGIC (No changes) ---
+    // --- UI LOGIC ---
     const menuBtn = document.getElementById('menu-btn');
     const closeBtn = document.getElementById('close-btn');
     const sideBar = document.getElementById('side-bar');
@@ -499,7 +504,7 @@
         } else if (voteBtn) {
             const requestId = voteBtn.dataset.id;
             const voteType = voteBtn.dataset.vote;
-            handleVote(requestId, voteType);
+            handleVote(requestId, voteType); // Event listener for voting
         }
     });
     reportReasonForm.addEventListener('submit', async (e) => {
@@ -559,10 +564,11 @@
         icon.classList.toggle('fa-eye');
         icon.classList.toggle('fa-eye-slash');
     });
+
     // --- Initialize Everything ---
     setupSoundActivation();
     fetchAndDisplayRequests();
-    setInterval(updateTimestamps, 60000); // Periodically update timestamps every minute
+    setInterval(updateTimestamps, 60000);
 </script>
 </body>
 </html>

@@ -64,84 +64,188 @@
         </section>
     </main>
     
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+   <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, query, doc, updateDoc, increment, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase Config (unchanged)
-        const firebaseConfig = {
-          apiKey: "AIzaSyBjGbfd-myjqLtqvdMp4b-h4LIaeZjfUto",
-          authDomain: "altabarue-bialdam.firebaseapp.com",
-          projectId: "altabarue-bialdam",
-          storageBucket: "altabarue-bialdam.appspot.com",
-          messagingSenderId: "1032387539358",
-          appId: "1:1032387539358:web:229d33a9d5a0f522c9268f"
-        };
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+    const firebaseConfig = {
+      apiKey: "AIzaSyBjGbfd-myjqLtqvdMp4b-h4LIaeZjfUto",
+      authDomain: "altabarue-bialdam.firebaseapp.com",
+      projectId: "altabarue-bialdam",
+      storageBucket: "altabarue-bialdam.appspot.com",
+      messagingSenderId: "1032387539358",
+      appId: "1:1032387539358:web:229d33a9d5a0f522c9268f"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-        // --- NEW: SIDEBAR LOGIC ---
-        const menuBtn = document.getElementById('menu-btn');
-        const closeBtn = document.getElementById('close-btn');
-        const sideBar = document.getElementById('side-bar');
-        const overlay = document.getElementById('overlay');
-        const toggleMenu = () => {
-            sideBar.classList.toggle('-right-full'); sideBar.classList.toggle('right-0');
-            overlay.classList.toggle('active');
-        };
-        menuBtn.addEventListener('click', toggleMenu);
-        closeBtn.addEventListener('click', toggleMenu);
-        overlay.addEventListener('click', toggleMenu);
-        // --- END: SIDEBAR LOGIC ---
+    // --- SIDEBAR LOGIC ---
+    const menuBtn = document.getElementById('menu-btn');
+    const closeBtn = document.getElementById('close-btn');
+    const sideBar = document.getElementById('side-bar');
+    const overlay = document.getElementById('overlay');
+    const toggleMenu = () => {
+        sideBar.classList.toggle('-right-full'); sideBar.classList.toggle('right-0');
+        overlay.classList.toggle('active');
+    };
+    menuBtn.addEventListener('click', toggleMenu);
+    closeBtn.addEventListener('click', toggleMenu);
+    overlay.addEventListener('click', toggleMenu);
 
-        const dashboard = document.getElementById('dashboard');
-        const searchInput = document.getElementById('search-input');
-        const sortOrderSelect = document.getElementById('sort-order');
-        let allRequests = [];
-
-        const createCardHTML = (doc) => {
-            const request = doc.data();
-            const date = request.createdAt ? new Date(request.createdAt.seconds * 1000).toLocaleDateString('ar-DZ') : 'غير متوفر';
-            let urgencyText, urgencyClass;
-            if(request.urgency === 'urgent') { urgencyText = 'عاجل جداً'; urgencyClass = 'bg-rose-100 text-rose-800'; }
-            else if(request.urgency === 'soon') { urgencyText = 'قريب'; urgencyClass = 'bg-amber-100 text-amber-800'; }
-            else { urgencyText = 'غير مستعجل'; urgencyClass = 'bg-green-100 text-green-800'; }
-
-            return `<div class="bg-white p-5 rounded-xl custom-shadow-lg transition duration-300 transform hover:-translate-y-1 ${request.urgency}"><div class="flex justify-between items-start gap-4"><div><h3 class="text-xl font-bold text-gray-800 ${request.verified ? 'verified' : ''}">${request.hospital}</h3><p class="text-gray-600">${request.wilaya}, ${request.location}</p></div><div class="bg-rose-500 text-white font-bold text-2xl p-2 rounded-full w-16 h-16 flex items-center justify-center shadow-lg flex-shrink-0">${request.bloodType}</div></div><div class="my-4 border-t pt-4 space-y-3"><p class="flex items-center gap-2" dir="ltr"><i class="fas fa-phone text-gray-400"></i><strong class="font-semibold">الهاتف:</strong> <a href="tel:${request.phone1}" class="text-blue-600 hover:underline tracking-wider">${request.phone1}</a></p><p class="flex items-center gap-2"><i class="fas fa-exclamation-circle text-gray-400"></i><strong class="font-semibold">الاستعجال:</strong> <span class="text-sm font-semibold px-3 py-1 rounded-full ${urgencyClass}">${urgencyText}</span></p></div><div class="flex justify-between items-center text-sm text-gray-500 pt-3 border-t"><p class="flex items-center gap-2"><i class="fas fa-calendar-alt"></i><span>أضيف بتاريخ: ${date}</span></p><a href="request.html?id=${doc.id}" class="bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold py-1 px-3 rounded-lg transition text-xs"><i class="fas fa-eye"></i> عرض التفاصيل</a></div></div>`;
-        };
-
-        const renderRequests = (requests) => {
-            dashboard.innerHTML = '';
-            if (requests.length === 0) { dashboard.innerHTML = `<div class="text-center p-10 bg-white rounded-xl custom-shadow-lg md:col-span-2 lg:col-span-3"><p class="text-gray-500 text-xl">لا توجد نتائج تطابق بحثك.</p></div>`; return; }
-            requests.forEach(doc => { dashboard.innerHTML += createCardHTML(doc); });
-        };
-
-        const filterAndSortRequests = () => {
-            let filtered = [...allRequests];
-            const searchTerm = searchInput.value.toLowerCase();
-            if (searchTerm) {
-                filtered = filtered.filter(doc => {
-                    const data = doc.data();
-                    return data.hospital.toLowerCase().includes(searchTerm) || data.wilaya.toLowerCase().includes(searchTerm);
-                });
+    // =================================================================
+    // =========== START: UNIFIED VOTING LOGIC (FINAL SOLUTION) ========
+    // =================================================================
+    const votesManager = {
+        votes: JSON.parse(localStorage.getItem('shifaa-votes')) || {},
+        getVote(requestId) { return this.votes[requestId]; },
+        setVote(requestId, voteType) {
+            if (voteType === null) {
+                delete this.votes[requestId];
+            } else {
+                this.votes[requestId] = voteType;
             }
-            renderRequests(filtered);
-        };
+            localStorage.setItem('shifaa-votes', JSON.stringify(this.votes));
+        },
+        updateCardUI(cardElement) {
+            const likeBtn = cardElement.querySelector('[data-vote="like"]');
+            if (!likeBtn) return;
+            const dislikeBtn = cardElement.querySelector('[data-vote="dislike"]');
+            const requestId = likeBtn.dataset.id;
+            const userVote = this.getVote(requestId);
 
-        const listenToRequests = () => {
-            const sortOrder = sortOrderSelect.value;
-            const q = query(collection(db, 'donation_requests'), orderBy('createdAt', sortOrder));
-            onSnapshot(q, (snapshot) => {
-                dashboard.innerHTML = `<div class="text-center p-10 bg-white rounded-xl custom-shadow-lg md:col-span-2 lg:col-span-3"><p class="text-gray-500 text-xl">جاري تحميل الحالات...</p></div>`;
-                if (snapshot.empty) { dashboard.innerHTML = `<div class="text-center p-10 bg-white rounded-xl custom-shadow-lg md:col-span-2 lg:col-span-3"><p class="text-gray-500 text-xl">لا توجد حالات حالياً.</p></div>`; return; }
-                allRequests = snapshot.docs;
-                filterAndSortRequests();
-            });
-        };
+            likeBtn.classList.remove('voted-like');
+            dislikeBtn.classList.remove('voted-dislike');
+
+            if (userVote === 'like') {
+                likeBtn.classList.add('voted-like');
+            } else if (userVote === 'dislike') {
+                dislikeBtn.classList.add('voted-dislike');
+            }
+        }
+    };
+
+    async function handleVote(requestId, voteType) {
+        const docRef = doc(db, 'donation_requests', requestId);
+        const currentVote = votesManager.getVote(requestId);
+
+        if (currentVote === voteType) return;
         
-        searchInput.addEventListener('keyup', filterAndSortRequests);
-        sortOrderSelect.addEventListener('change', listenToRequests);
-        listenToRequests();
-    </script>
+        votesManager.setVote(requestId, voteType);
+        const cardElement = document.querySelector(`.vote-btn[data-id="${requestId}"]`).closest('.bg-white');
+        if (cardElement) {
+           votesManager.updateCardUI(cardElement);
+        }
+
+        const updates = {};
+        updates[`${voteType}s`] = increment(1);
+        
+        if (currentVote) {
+            const oppositeVoteType = currentVote === 'like' ? 'dislikes' : 'likes';
+            updates[oppositeVoteType] = increment(-1);
+        }
+        
+        try {
+            await updateDoc(docRef, updates);
+        } catch (error) {
+            console.error("Error processing vote: ", error);
+            votesManager.setVote(requestId, currentVote); 
+             if (cardElement) {
+                votesManager.updateCardUI(cardElement);
+             }
+             alert("حدث خطأ أثناء تسجيل تصويتك. الرجاء المحاولة مرة أخرى.");
+        }
+    }
+    // =================================================================
+    // =========== END: UNIFIED VOTING LOGIC (FINAL SOLUTION) ==========
+    // =================================================================
+
+    const dashboard = document.getElementById('dashboard');
+    const searchInput = document.getElementById('search-input');
+    const sortOrderSelect = document.getElementById('sort-order');
+    let allRequests = [];
+
+    // NOTE: This file had two different `createCardHTML` functions. I've chosen the more detailed one from `request.html`
+    // and added the voting buttons to it to make it consistent and fully functional.
+    const createCardHTML = (doc) => {
+        const request = doc.data();
+        const date = request.createdAt ? new Date(request.createdAt.seconds * 1000).toLocaleDateString('ar-DZ') : 'غير متوفر';
+        let urgencyText, urgencyClass;
+        if(request.urgency === 'urgent') { urgencyText = 'عاجل جداً'; urgencyClass = 'bg-rose-100 text-rose-800'; }
+        else if(request.urgency === 'soon') { urgencyText = 'قريب'; urgencyClass = 'bg-amber-100 text-amber-800'; }
+        else { urgencyText = 'غير مستعجل'; urgencyClass = 'bg-green-100 text-green-800'; }
+
+        return `<div class="bg-white p-5 rounded-xl custom-shadow-lg transition duration-300 transform hover:-translate-y-1 ${request.urgency}">
+                    <div class="flex justify-between items-start gap-4">
+                        <div><h3 class="text-xl font-bold text-gray-800 ${request.verified ? 'verified' : ''}">${request.hospital}</h3><p class="text-gray-600">${request.wilaya}, ${request.location}</p></div>
+                        <div class="bg-rose-500 text-white font-bold text-2xl p-2 rounded-full w-16 h-16 flex items-center justify-center shadow-lg flex-shrink-0">${request.bloodType}</div>
+                    </div>
+                    <div class="my-4 border-t pt-4 space-y-3">
+                        <p class="flex items-center gap-2" dir="ltr"><i class="fas fa-phone text-gray-400"></i><strong class="font-semibold">الهاتف:</strong> <a href="tel:${request.phone1}" class="text-blue-600 hover:underline tracking-wider">${request.phone1}</a></p>
+                        <p class="flex items-center gap-2"><i class="fas fa-exclamation-circle text-gray-400"></i><strong class="font-semibold">الاستعجال:</strong> <span class="text-sm font-semibold px-3 py-1 rounded-full ${urgencyClass}">${urgencyText}</span></p>
+                    </div>
+                    <div class="flex justify-between items-center text-sm text-gray-500 pt-3 border-t">
+                        <p class="flex items-center gap-2"><i class="fas fa-calendar-alt"></i><span>أضيف بتاريخ: ${date}</span></p>
+                        <div class="flex items-center gap-3">
+                            <button data-id="${doc.id}" data-vote="like" class="vote-btn text-gray-500 hover:text-green-600 transition">
+                                <i class="fas fa-thumbs-up"></i> <span class="like-count font-semibold">${request.likes || 0}</span>
+                            </button>
+                            <button data-id="${doc.id}" data-vote="dislike" class="vote-btn text-gray-500 hover:text-red-600 transition">
+                                <i class="fas fa-thumbs-down"></i> <span class="dislike-count font-semibold">${request.dislikes || 0}</span>
+                            </button>
+                            </div>
+                    </div>
+                </div>`;
+    };
+
+    const renderRequests = (requests) => {
+        dashboard.innerHTML = '';
+        if (requests.length === 0) { dashboard.innerHTML = `<div class="text-center p-10 bg-white rounded-xl custom-shadow-lg md:col-span-2 lg:col-span-3"><p class="text-gray-500 text-xl">لا توجد نتائج تطابق بحثك.</p></div>`; return; }
+        requests.forEach(doc => {
+            const cardHTML = createCardHTML(doc);
+            const cardElement = document.createElement('div'); // Create a wrapper to parse the HTML
+            cardElement.innerHTML = cardHTML.trim();
+            const newCard = cardElement.firstChild;
+            dashboard.appendChild(newCard);
+            votesManager.updateCardUI(newCard); // Apply correct vote style after rendering
+        });
+    };
+
+    const filterAndSortRequests = () => {
+        let filtered = [...allRequests];
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        if (searchTerm) {
+            filtered = filtered.filter(doc => {
+                const data = doc.data();
+                return data.hospital.toLowerCase().includes(searchTerm) || data.wilaya.toLowerCase().includes(searchTerm);
+            });
+        }
+        renderRequests(filtered);
+    };
+
+    const listenToRequests = () => {
+        const sortOrder = sortOrderSelect.value;
+        const q = query(collection(db, 'donation_requests'), orderBy('createdAt', sortOrder));
+        onSnapshot(q, (snapshot) => {
+            dashboard.innerHTML = `<div class="text-center p-10 bg-white rounded-xl custom-shadow-lg md:col-span-2 lg:col-span-3"><p class="text-gray-500 text-xl">جاري تحميل الحالات...</p></div>`;
+            if (snapshot.empty) { dashboard.innerHTML = `<div class="text-center p-10 bg-white rounded-xl custom-shadow-lg md:col-span-2 lg:col-span-3"><p class="text-gray-500 text-xl">لا توجد حالات حالياً.</p></div>`; return; }
+            allRequests = snapshot.docs;
+            filterAndSortRequests();
+        });
+    };
+    
+    // Add main event listener for voting
+    dashboard.addEventListener('click', (e) => {
+        const voteBtn = e.target.closest('.vote-btn');
+        if (voteBtn) {
+            const requestId = voteBtn.dataset.id;
+            const voteType = voteBtn.dataset.vote;
+            handleVote(requestId, voteType);
+        }
+    });
+
+    searchInput.addEventListener('input', filterAndSortRequests);
+    sortOrderSelect.addEventListener('change', listenToRequests);
+    listenToRequests(); // Initial fetch
+</script>
 </body>
 </html>
