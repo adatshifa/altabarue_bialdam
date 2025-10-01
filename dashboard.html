@@ -124,7 +124,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        // --- تعديل: تم استيراد الدوال اللازمة لتثبيت جلسة الدخول
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, query, doc, deleteDoc, updateDoc, addDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
@@ -181,11 +182,26 @@
                 logoutButton.classList.add('hidden');
             }
         });
+        
+        // --- تعديل: تم تحديث دالة تسجيل الدخول لتشمل خاصية الاحتفاظ بالجلسة
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            signInWithEmailAndPassword(auth, loginForm['login-email'].value, loginForm['login-password'].value)
-                .catch(() => { loginError.textContent = 'بيانات الدخول غير صحيحة.'; });
+            const email = loginForm['login-email'].value;
+            const password = loginForm['login-password'].value;
+            
+            // ضبط حالة استمرارية تسجيل الدخول (للحفظ في المتصفح)
+            setPersistence(auth, browserLocalPersistence)
+                .then(() => {
+                    // الآن قم بتسجيل الدخول
+                    return signInWithEmailAndPassword(auth, email, password);
+                })
+                .catch((error) => {
+                    // معالجة الأخطاء
+                    console.error("Login Error:", error);
+                    loginError.textContent = 'بيانات الدخول غير صحيحة.';
+                });
         });
+
         logoutButton.addEventListener('click', () => signOut(auth));
 
         function switchTab(activeTab, activePanel) {
