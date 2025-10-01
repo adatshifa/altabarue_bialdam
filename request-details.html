@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+    
     <style>
         body { font-family: 'Cairo', sans-serif; background-color: #f0fdfa; }
         .details-card { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
@@ -20,15 +20,34 @@
             background-color: rgba(17, 24, 39, 0.9); color: white; padding: 12px 24px;
             border-radius: 50px; font-size: 1rem; font-weight: 600; z-index: 9999;
             transition: bottom 0.5s ease-in-out; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            text-align: center;
         }
         #toast-notification.show { bottom: 30px; }
-        .social-btn {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 0.75rem 0.5rem; border-radius: 0.75rem; transition: transform 0.2s, background-color 0.2s;
-            text-decoration: none; color: white; font-size: 0.75rem; font-weight: bold;
+        /* Style for new buttons */
+        .action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem; /* 8px */
+            padding: 1rem; /* 16px */
+            border-radius: 0.5rem; /* 8px */
+            color: white;
+            text-decoration: none;
+            transition: all 0.2s ease-in-out;
         }
-        .social-btn:hover { transform: translateY(-4px); }
-        .social-btn i { font-size: 1.75rem; margin-bottom: 0.5rem; }
+        .action-btn:hover {
+             transform: translateY(-4px);
+             box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .action-btn i { font-size: 2.25rem; /* 36px */ }
+        .action-btn span { font-weight: 600; }
+        .action-btn.loading {
+            background-color: #9ca3af !important;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
     </style>
 </head>
 <body>
@@ -50,17 +69,20 @@
             <div id="request-details" class="hidden"></div>
         </div>
 
-        <div id="action-buttons" class="hidden max-w-2xl mx-auto mt-6">
-            <p class="text-center font-bold text-gray-600 mb-4">شارك الطلب مباشرة عبر:</p>
-            <div class="grid grid-cols-3 sm:grid-cols-6 gap-3 text-center">
-                <a id="share-facebook" href="#" target="_blank" class="social-btn bg-[#1877F2]"><i class="fab fa-facebook"></i><span>فيسبوك</span></a>
-                <a id="share-messenger" href="#" target="_blank" class="social-btn bg-[#00B2FF]"><i class="fab fa-facebook-messenger"></i><span>ماسنجر</span></a>
-                <a id="share-telegram" href="#" target="_blank" class="social-btn bg-[#26A5E4]"><i class="fab fa-telegram"></i><span>تليجرام</span></a>
-                <a id="share-whatsapp" href="#" target="_blank" class="social-btn bg-[#25D366]"><i class="fab fa-whatsapp"></i><span>واتساب</span></a>
-                <a id="share-gmail" href="#" target="_blank" class="social-btn bg-[#EA4335]"><i class="fas fa-envelope"></i><span>Gmail</span></a>
-                <button id="share-image-btn" class="social-btn bg-gradient-to-br from-purple-500 to-pink-500"><i class="fas fa-camera-retro"></i><span>صورة</span></button>
+        <div id="action-buttons" class="hidden max-w-2xl mx-auto mt-8">
+             <p class="text-center font-bold text-gray-700 mb-4 text-lg">شارك أو تواصل مباشرة:</p>
+            <div id="share-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <a id="call-btn" href="#" class="action-btn bg-teal-500 hover:bg-teal-600"><i class="fas fa-phone-alt"></i><span class="font-semibold">اتصال هاتفي</span></a>
+                <a id="sms-btn" href="#" class="action-btn bg-orange-500 hover:bg-orange-600"><i class="fas fa-sms"></i><span class="font-semibold">رسالة SMS</span></a>
+                
+                <a href="#" data-share-app="whatsapp" class="action-btn bg-green-500 hover:bg-green-600"><i class="fab fa-whatsapp"></i><span class="font-semibold">واتساب</span></a>
+                <a href="#" data-share-app="facebook" class="action-btn bg-blue-600 hover:bg-blue-700"><i class="fab fa-facebook"></i><span class="font-semibold">فيسبوك</span></a>
+                <a href="#" data-share-app="messenger" class="action-btn bg-sky-500 hover:bg-sky-600"><i class="fab fa-facebook-messenger"></i><span class="font-semibold">ماسنجر</span></a>
+                <a href="#" data-share-app="telegram" class="action-btn bg-sky-500 hover:bg-sky-600"><i class="fab fa-telegram"></i><span class="font-semibold">تليجرام</span></a>
+                <a href="#" data-share-app="instagram" class="action-btn bg-pink-600 hover:bg-pink-700"><i class="fab fa-instagram"></i><span class="font-semibold">انستغرام</span></a>
+                <a href="#" data-share-app="other" class="action-btn bg-gray-500 hover:bg-gray-600"><i class="fas fa-share-alt"></i><span class="font-semibold">مشاركة أخرى</span></a>
             </div>
-             <p class="text-center text-xs text-gray-500 mt-3">لمشاركة الطلب على انستقرام أو تيك توك، اضغط على زر "صورة" ثم قم بحفظها ومشاركتها.</p>
+            <p class="text-center text-xs text-gray-500 mt-4">عند المشاركة، سيتم تجهيز صورة ونص للمشاركة معاً.</p>
         </div>
     </main>
 
@@ -85,13 +107,16 @@
         const loader = document.getElementById('loader');
         const requestDetailsContainer = document.getElementById('request-details');
         const actionButtons = document.getElementById('action-buttons');
-        const shareImageBtn = document.getElementById('share-image-btn');
         const toast = document.getElementById('toast-notification');
+        const shareGrid = document.getElementById('share-grid');
+
+        let requestData = {};
+        let isSharing = false;
 
         const showToast = (message) => {
             toast.textContent = message;
             toast.classList.add('show');
-            setTimeout(() => { toast.classList.remove('show'); }, 3000);
+            setTimeout(() => { toast.classList.remove('show'); }, 4000);
         };
 
         const getRequestId = () => new URLSearchParams(window.location.search).get('id');
@@ -102,8 +127,8 @@
                 const docRef = doc(db, 'donation_requests', id);
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
-                    displayRequestDetails(docSnap.data());
-                    updateShareLinks(docSnap.data());
+                    requestData = { id: docSnap.id, ...docSnap.data() };
+                    displayRequestDetails(requestData);
                 } else {
                     showError("هذا الطلب غير موجود أو قد تم حذفه.");
                 }
@@ -117,11 +142,8 @@
             const date = (data.createdAt && data.createdAt.seconds) ? new Date(data.createdAt.seconds * 1000).toLocaleDateString('ar-DZ') : 'غير متوفر';
             let urgencyText, urgencyClass;
             if (data.urgency === 'urgent') { urgencyText = 'عاجل جداً'; urgencyClass = 'bg-rose-100 text-rose-800'; }
-            else if (data.urgency === 'soon') { urgencyText = 'قريب'; urgencyClass = 'bg-amber-100 text-amber-800'; }
             else { urgencyText = 'غير مستعجل'; urgencyClass = 'bg-green-100 text-green-800'; }
-
             document.title = `طلب تبرع: ${data.bloodType} في ${data.hospital} - أداة شفاء`;
-
             requestDetailsContainer.innerHTML = `
                 <div id="request-card" class="bg-white p-6 sm:p-8 rounded-2xl details-card overflow-hidden">
                     <div class="flex justify-between items-center pb-4 border-b">
@@ -129,7 +151,10 @@
                             <p class="text-gray-500">فصيلة الدم المطلوبة</p>
                             <p class="text-6xl font-extrabold text-rose-600">${data.bloodType}</p>
                         </div>
-                        <i class="fas fa-tint text-6xl text-rose-200"></i>
+                        <div class="text-center">
+                             <img src="https://i.imgur.com/3aGIZa8.png" alt="Shefaa Logo" style="width: 70px; height: auto; margin-bottom: 5px;"/>
+                             <span class="text-xs font-bold text-teal-600">أداة شفاء</span>
+                        </div>
                     </div>
                     <div class="mt-6 space-y-4">
                         <div class="flex items-start gap-3"><i class="fas fa-hospital text-2xl text-gray-400 mt-1"></i>
@@ -137,61 +162,111 @@
                         </div>
                         <div class="flex items-center gap-3"><i class="fas fa-phone text-2xl text-gray-400"></i><a href="tel:${data.phone1}" class="text-blue-600 text-xl font-semibold tracking-wider hover:underline" dir="ltr">${data.phone1}</a></div>
                         <div class="flex items-center gap-3"><i class="fas fa-exclamation-circle text-2xl text-gray-400"></i><span class="text-sm font-semibold px-3 py-1 rounded-full ${urgencyClass}">${urgencyText}</span></div>
-                        ${data.details ? `<div class="pt-4 border-t"><p class="text-gray-700 bg-gray-50 p-3 rounded-lg">${data.details}</p></div>` : ''}
                     </div>
                     <div class="mt-6 pt-4 border-t text-sm text-gray-500">
                         <span>أضيف بتاريخ: ${date}</span>
                     </div>
-                </div>
-            `;
+                </div>`;
             
+            // Setup direct action buttons
+            const shareTextForSms = `🚨 طلب تبرع عاجل 🚨\nفصيلة: ${data.bloodType}\nالمستشفى: ${data.hospital}, ${data.wilaya}\nللتواصل: ${data.phone1}\n${window.location.href}`;
+            document.getElementById('call-btn').href = `tel:${data.phone1}`;
+            document.getElementById('sms-btn').href = `sms:${data.phone1}?body=${encodeURIComponent(shareTextForSms)}`;
+
             loader.classList.add('hidden');
             requestDetailsContainer.classList.remove('hidden');
             actionButtons.classList.remove('hidden');
         };
 
-        const updateShareLinks = (data) => {
-            const pageUrl = window.location.href;
-            const shareText = `🚨 طلب تبرع بالدم عاجل 🚨\n\nفصيلة الدم: ${data.bloodType}\nالمستشفى: ${data.hospital}\nالولاية: ${data.wilaya}\n\nللتواصل والمزيد من التفاصيل عبر الرابط:`;
-            const encodedUrl = encodeURIComponent(pageUrl);
-            const encodedText = encodeURIComponent(shareText);
-
-            document.getElementById('share-facebook').href = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
-            document.getElementById('share-messenger').href = `fb-messenger://share/?link=${encodedUrl}`;
-            document.getElementById('share-telegram').href = `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`;
-            document.getElementById('share-whatsapp').href = `https://api.whatsapp.com/send?text=${encodedText}%20${encodedUrl}`;
-            document.getElementById('share-gmail').href = `mailto:?subject=طلب تبرع بالدم عاجل&body=${encodedText}%20${encodedUrl}`;
-        };
-
         const showError = (message) => {
             loader.innerHTML = `<div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg" role="alert"><p class="font-bold">حدث خطأ</p><p>${message}</p></div>`;
         };
-
-        const generateAndOpenImage = async () => {
-             shareImageBtn.disabled = true;
-             shareImageBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>انتظر</span>';
-             showToast('جاري تجهيز الصورة...');
-
+        
+        const generateCanvas = () => {
              const card = document.getElementById('request-card');
-             if (!card) return;
-
-             try {
-                const canvas = await html2canvas(card, { scale: 2.5, backgroundColor: '#ffffff', useCORS: true });
-                const imageURL = canvas.toDataURL('image/png');
-                const newWindow = window.open();
-                newWindow.document.write(`<img src="${imageURL}" style="max-width: 100%; height: auto;" alt="Donation Request"/> <h2 style="font-family: Cairo, sans-serif; text-align: center;">اضغط مطولاً على الصورة لحفظها ثم شاركها</h2>`);
-                showToast('تم فتح الصورة بنجاح.');
-             } catch(err) {
-                console.error('Image generation failed:', err);
-                showToast('حدث خطأ أثناء إنشاء الصورة.');
-             } finally {
-                shareImageBtn.disabled = false;
-                shareImageBtn.innerHTML = '<i class="fas fa-camera-retro"></i><span>صورة</span>';
-             }
+             if (!card) return null;
+             return html2canvas(card, { scale: 2.5, backgroundColor: '#ffffff', useCORS: true });
         };
 
-        shareImageBtn.addEventListener('click', generateAndOpenImage);
+        const initiateShare = async (button) => {
+            if (isSharing) return;
+            isSharing = true;
+            
+            const originalContent = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin text-3xl"></i><span class="font-semibold">تجهيز...</span>';
+            button.classList.add('loading');
+
+            try {
+                // 1. Prepare share data
+                const shareTitle = 'طلب تبرع بالدم عاجل';
+                const shareText = `🚨 طلب تبرع عاجل 🚨\nفصيلة: ${requestData.bloodType}\nالمستشفى: ${requestData.hospital}, ${requestData.wilaya}\nللتواصل: ${requestData.phone1}\n\n${window.location.href}`;
+
+                showToast('الرجاء الانتظار، جاري تجهيز الصورة...');
+                const canvas = await generateCanvas();
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                const file = new File([blob], 'shifaa-donation-request.png', { type: 'image/png' });
+
+                const shareData = {
+                    title: shareTitle,
+                    text: shareText,
+                    files: [file]
+                };
+
+                // 2. Try modern Web Share API (Best for mobile)
+                if (navigator.share && navigator.canShare({ files: [file] })) {
+                    await navigator.share(shareData);
+                } else {
+                    // 3. Fallback for desktop or unsupported browsers
+                    showToast('المشاركة المباشرة غير مدعومة. سيتم فتح نافذة جديدة.');
+                    const app = button.dataset.shareApp;
+                    const encodedUrl = encodeURIComponent(window.location.href);
+                    const encodedTextWithUrl = encodeURIComponent(shareText);
+
+                    let fallbackUrl;
+                    switch (app) {
+                        case 'facebook':
+                            fallbackUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
+                            break;
+                        case 'whatsapp':
+                            fallbackUrl = `https://api.whatsapp.com/send?text=${encodedTextWithUrl}`;
+                            break;
+                        case 'telegram':
+                            fallbackUrl = `https://t.me/share/url?url=${encodedUrl}&text=${encodeURIComponent(shareText.split('\n\n')[0])}`;
+                            break;
+                        default:
+                            // For Instagram, Messenger, Other on desktop, the best fallback is to show the image for saving
+                            const imageURL = canvas.toDataURL('image/png');
+                            const newWindow = window.open();
+                            newWindow.document.write(`<img src="${imageURL}" style="max-width: 100%; height: auto;" alt="Donation Request"/> <h2 style="font-family: Cairo, sans-serif; text-align: center;">اضغط مطولاً على الصورة لحفظها ومشاركتها</h2>`);
+                            return; // Exit after opening new window
+                    }
+                    if (fallbackUrl) {
+                        window.open(fallbackUrl, '_blank', 'popup=true');
+                    }
+                }
+            } catch (err) {
+                // Ignore AbortError which happens when the user closes the share dialog
+                if (err.name !== 'AbortError') {
+                    console.error('Share failed:', err);
+                    showToast('فشلت عملية المشاركة.');
+                }
+            } finally {
+                isSharing = false;
+                button.innerHTML = originalContent;
+                button.classList.remove('loading');
+            }
+        };
+
+        // Event delegation for all share buttons
+        shareGrid.addEventListener('click', (event) => {
+            const shareButton = event.target.closest('a[data-share-app]');
+            if (shareButton) {
+                event.preventDefault(); // Prevent default link behavior
+                initiateShare(shareButton);
+            }
+        });
         
+        // Initial fetch
         fetchRequestDetails(getRequestId());
     </script>
 </body>
