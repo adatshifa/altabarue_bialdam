@@ -155,7 +155,6 @@
             requestDetailsContainer.classList.remove('hidden');
             actionButtons.classList.remove('hidden');
 
-            // [إضافة] ربط الزر الجديد بالنافذة
             document.getElementById('show-share-modal-btn').onclick = showShareModal;
         };
 
@@ -163,16 +162,37 @@
             loader.innerHTML = `<div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg" role="alert"><p class="font-bold">حدث خطأ</p><p>${message}</p></div>`;
         };
         
-        // --- [بداية] وظيفة النافذة المنبثقة الجديدة ---
+        // --- [بداية] وظيفة النافذة المنبثقة الجديدة والمحسّنة للـ WebView ---
         function showShareModal() {
             const shareUrl = window.location.href;
+            // هذا النص يحتوي على تفاصيل الحالة والرابط، وهو ما سيتم مشاركته
             const shareText = `🚨 *طلب تبرع دم عاجل* 🚨\n\n*الفصيلة المطلوبة:* ${requestData.bloodType}\n*المستشفى:* ${requestData.hospital}, ${requestData.wilaya}\n*للتواصل المباشر:* ${requestData.phone1}\n\n*لمزيد من التفاصيل عبر الرابط:*\n${shareUrl}`;
-            const encodedShareText = encodeURIComponent(shareText);
             const phoneNumber = requestData.phone1.replace(/\D/g, '');
 
-            const facebookQuote = `🚨 نداء عاجل للتبرع بالدم 🚨\n\nالفصيلة المطلوبة: ${requestData.bloodType}\nالمكان: ${requestData.hospital}, ${requestData.wilaya}\nللتواصل وإنقاذ حياة: ${requestData.phone1}\n\nالرجاء المشاركة على أوسع نطاق!`;
-            const encodedFacebookQuote = encodeURIComponent(facebookQuote);
-            const encodedUrl = encodeURIComponent(shareUrl);
+            // وظيفة مساعدة لنسخ النص إلى الحافظة
+            const copyToClipboard = (text) => {
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        showToast('تم نسخ النص والرابط بنجاح!');
+                    }).catch(err => {
+                        showToast('فشل النسخ.');
+                    });
+                } else {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    textArea.style.position = "fixed";
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    try {
+                        document.execCommand('copy');
+                        showToast('تم نسخ النص والرابط بنجاح!');
+                    } catch (err) {
+                        showToast('فشل النسخ.');
+                    }
+                    document.body.removeChild(textArea);
+                }
+            };
 
             const modalHTML = `
             <div class="modal-backdrop" id="modal-backdrop-share">
@@ -181,20 +201,61 @@
                         <h2 class="text-xl font-bold"><i class="fas fa-share-alt mr-2 text-teal-500"></i> شارك لإنقاذ حياة</h2>
                         <button id="modal-close-btn-share" class="text-2xl hover:text-red-500">&times;</button>
                     </div>
-                    <div class="p-5 text-center">
-                        <p class="mb-6 text-gray-700">اختر إحدى الوسائل التالية للتواصل المباشر أو لمشاركة نداء التبرع. مساهمتك قد تنقذ حياة.</p>
-                        <div class="grid grid-cols-2 gap-4">
-                            <a href="tel:${phoneNumber}" class="flex flex-col items-center justify-center gap-2 p-4 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-all"><i class="fas fa-phone-alt text-3xl"></i><span class="font-semibold">اتصال هاتفي</span></a>
-                            <a href="https://wa.me/${phoneNumber}?text=${encodedShareText}" target="_blank" class="flex flex-col items-center justify-center gap-2 p-4 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all"><i class="fab fa-whatsapp text-3xl"></i><span class="font-semibold">واتساب</span></a>
-                            <a href="tg://msg_url?url=${encodedUrl}&text=${encodedShareText}" target="_blank" class="flex flex-col items-center justify-center gap-2 p-4 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-all"><i class="fab fa-telegram text-3xl"></i><span class="font-semibold">تليجرام</span></a>
-                            <a href="https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedFacebookQuote}" target="_blank" class="flex flex-col items-center justify-center gap-2 p-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all"><i class="fab fa-facebook text-3xl"></i><span class="font-semibold">فيسبوك</span></a>
-                            <a href="sms:${phoneNumber}?body=${encodedShareText}" class="col-span-2 flex flex-col items-center justify-center gap-2 p-4 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all"><i class="fas fa-sms text-3xl"></i><span class="font-semibold">رسالة SMS</span></a>
+                    <div class="p-5">
+                        <p class="mb-6 text-center text-gray-700">مساهمتك في المشاركة قد تكون سبباً في إنقاذ حياة. اختر الطريقة المناسبة لك.</p>
+                        <div class="space-y-3">
+                            <a href="tel:${phoneNumber}" class="w-full flex items-center justify-center gap-3 p-4 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-all text-lg">
+                                <i class="fas fa-phone-alt text-xl"></i><span class="font-semibold">اتصال هاتفي مباشر</span>
+                            </a>
+                            <button id="native-share-btn" class="w-full flex items-center justify-center gap-3 p-4 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-all text-lg">
+                                <i class="fas fa-share-square text-xl"></i><span class="font-semibold">مشاركة النداء عبر التطبيقات</span>
+                            </button>
+                            <button id="copy-link-btn" class="w-full flex items-center justify-center gap-3 p-4 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all text-lg">
+                                <i class="fas fa-copy text-xl"></i><span class="font-semibold">نسخ النص والرابط</span>
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>`;
             
             modalContainer.innerHTML = modalHTML;
+
+            // ربط الأحداث مع الأزرار الجديدة
+            document.getElementById('copy-link-btn').onclick = () => {
+                copyToClipboard(shareText);
+            };
+
+            document.getElementById('native-share-btn').onclick = () => {
+                const shareData = {
+                    title: 'طلب تبرع دم عاجل',
+                    text: shareText,
+                    url: shareUrl,
+                };
+
+                // 1. التحقق من وجود واجهة أندرويد البرمجية (لـ WebView)
+                if (window.Android && typeof window.Android.shareText === 'function') {
+                    window.Android.shareText(shareText);
+                
+                // 2. التحقق من وجود واجهة iOS البرمجية (لـ WebView)
+                } else if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.shareHandler) {
+                    window.webkit.messageHandlers.shareHandler.postMessage(shareText);
+                
+                // 3. الحل البديل: استخدام Web Share API للمتصفحات الحديثة
+                } else if (navigator.share) {
+                    navigator.share(shareData).catch((error) => {
+                        console.error('Error sharing:', error);
+                        if (error.name !== 'AbortError') { // لا تظهر خطأ إذا ألغى المستخدم المشاركة
+                            showToast('حدث خطأ أثناء محاولة المشاركة.');
+                        }
+                    });
+                
+                // 4. الحل الأخير: نسخ النص إذا لم تكن أي من الطرق السابقة متاحة
+                } else {
+                    showToast('المشاركة المباشرة غير مدعومة. تم نسخ النص بدلاً من ذلك.');
+                    copyToClipboard(shareText);
+                }
+            };
+
             const close = () => { modalContainer.innerHTML = ''; };
             document.getElementById('modal-close-btn-share').onclick = close;
             document.getElementById('modal-backdrop-share').onclick = (e) => { 
