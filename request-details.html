@@ -70,8 +70,7 @@
                 <span>نسخ الرابط</span>
             </button>
             <button id="share-link-btn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition">
-                <i class="fas fa-link"></i>
-                <span>مشاركة الرابط</span>
+                <i class="fas fa-share-alt"></i> <span>مشاركة الرابط</span>
             </button>
             <button id="share-image-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition">
                 <i class="fas fa-image"></i>
@@ -90,7 +89,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Votre configuration Firebase reste inchangée
+        // Your Firebase configuration remains unchanged
         const firebaseConfig = {
           apiKey: "AIzaSyBjGbfd-myjqLtqvdMp4b-h4LIaeZjfUto",
           authDomain: "altabarue-bialdam.firebaseapp.com",
@@ -154,6 +153,9 @@
 
             document.title = `طلب تبرع: ${escapeHTML(data.bloodType)} في ${escapeHTML(data.hospital)} - أداة شفاء`;
 
+            // **IMPROVEMENT**: The phone number is now a clickable link with the correct "tel:" protocol.
+            // For this to work in the Android app, the WebView must be configured to handle "tel:" intents.
+            // This is a setting in the Android Studio project, not in this HTML code.
             requestDetailsContainer.innerHTML = `
                 <div id="request-card" class="bg-white p-6 sm:p-8 rounded-2xl details-card">
                     <div class="flex justify-between items-center pb-4 border-b">
@@ -191,7 +193,7 @@
 
             try {
                 new QRCode(document.getElementById("qrcode-container"), {
-                    text: "https://adatshifa.github.io/altabarue_bialdam/home_altabarue_bialdam.html",
+                    text: window.location.href, // QR Code now links to the current request
                     width: 80, height: 80, correctLevel : QRCode.CorrectLevel.H
                 });
             } catch (e) {
@@ -205,29 +207,26 @@
             loader.innerHTML = `<div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg" role="alert"><p class="font-bold">حدث خطأ</p><p>${message}</p></div>`;
         };
         
-        /**
-         * Génère un objet 'canvas' à partir de la carte de la demande.
-         * C'est la partie la plus coûteuse en ressources, donc nous la centralisons.
-         * @returns {Promise<HTMLCanvasElement|null>}
-         */
         const generateCanvasFromCard = async () => {
              const card = document.getElementById('request-card');
              if (!card) return null;
-
+             
+             // Hide QR code before capture to prevent it from showing a link to itself
              const qrCode = card.querySelector('#qrcode-wrapper');
              if (qrCode) qrCode.style.visibility = 'hidden';
              
              const canvas = await html2canvas(card, {
-                 scale: 2, // Augmente la résolution pour une meilleure qualité
+                 scale: 2.5, // Increased resolution for better quality
                  backgroundColor: '#ffffff',
-                 useCORS: true
+                 useCORS: true,
+                 logging: false
              });
 
-             if (qrCode) qrCode.style.visibility = 'visible';
+             if (qrCode) qrCode.style.visibility = 'visible'; // Show it again
              return canvas;
         };
 
-        // --- Logique des boutons ---
+        // --- Button Logic ---
 
         copyLinkBtn.addEventListener('click', () => {
             navigator.clipboard.writeText(window.location.href).then(() => {
@@ -237,31 +236,29 @@
                 showToast('فشل نسخ الرابط.');
             });
         });
-
+        
         /**
-         * Bouton de TÉLÉCHARGEMENT : Utilise une Data URL pour une compatibilité maximale avec WebView.
+         * **IMPROVEMENT FOR WEBVIEW**
+         * This function now opens the generated image in a new browser tab.
+         * From there, the user can easily long-press the image and select "Save to gallery" or "Download".
+         * This is much more reliable inside a WebView than trying to force a download directly.
          */
         downloadBtn.addEventListener('click', async () => {
             const originalText = downloadBtn.innerHTML;
             downloadBtn.innerHTML = '<span><i class="fas fa-spinner fa-spin mr-2"></i>جاري التجهيز...</span>';
             downloadBtn.disabled = true;
             
-            showToast('بدأ تجهيز الصورة للتحميل...');
+            showToast('بدأ تجهيز الصورة...');
             try {
                 const canvas = await generateCanvasFromCard();
                 if (canvas) {
-                    // Convertit le canvas en Data URL (base64)
                     const imageURL = canvas.toDataURL('image/png');
-                    
-                    // Crée un lien, définit la Data URL comme sa source, et le clique
-                    const link = document.createElement('a');
-                    link.download = `shifaa-request-${getRequestId() || 'file'}.png`;
-                    link.href = imageURL;
-                    document.body.appendChild(link); // Requis pour la compatibilité
-                    link.click();
-                    document.body.removeChild(link); // Nettoyage
+                    // Open the image in a new tab. This is the key change for WebView compatibility.
+                    const newWindow = window.open();
+                    newWindow.document.write(`<img src="${imageURL}" style="max-width: 100%; height: auto;" alt="Donation Request"/>`);
+                    showToast('تم فتح الصورة، اضغط مطولاً عليها للحفظ.');
                 } else {
-                    throw new Error("La génération du canvas a échoué.");
+                    throw new Error("Canvas generation failed.");
                 }
             } catch (err) {
                 console.error('Download failed:', err);
@@ -274,25 +271,34 @@
         
         shareLinkBtn.addEventListener('click', async () => {
             const shareData = {
-                title: 'طلب تبرع بالدم عاجل',
-                text: `حالة بحاجة ماسة للتبرع بالدم، فصيلة: ${requestDataForShare.bloodType} في ${requestDataForShare.hospital}`,
+                title: 'طلب تبرع بالدم عاجل - أداة شفاء',
+                text: `🚨 حالة بحاجة للتبرع بالدم!\nفصيلة: ${requestDataForShare.bloodType}\nالمستشفى: ${requestDataForShare.hospital}\nالولاية: ${requestDataForShare.wilaya}`,
                 url: window.location.href
             };
             try {
+                // The Web Share API is the modern way and works in recent WebViews.
+                // It will open the native Android share dialog.
                 if (navigator.share) {
                     await navigator.share(shareData);
                 } else {
-                    navigator.clipboard.writeText(window.location.href);
-                    showToast('تم نسخ الرابط! يمكنك الآن مشاركته.');
+                    // Fallback for older WebViews: copy the link and notify the user.
+                    navigator.clipboard.writeText(shareData.url);
+                    showToast('المشاركة غير مدعومة، تم نسخ الرابط بدلاً من ذلك!');
                 }
             } catch (err) { 
-                console.error("Share failed:", err); 
-                showToast('فشلت عملية المشاركة.');
+                // Ignore "AbortError" which happens when the user closes the share dialog
+                if (err.name !== 'AbortError') {
+                    console.error("Share failed:", err); 
+                    showToast('فشلت عملية المشاركة.');
+                }
             }
         });
 
         /**
-         * Bouton de PARTAGE D'IMAGE : Utilise l'API Web Share moderne et se rabat sur le téléchargement.
+         * **IMPROVEMENT FOR WEBVIEW**
+         * This now has a more robust fallback. If sharing the image directly fails
+         * or isn't supported, it will trigger the improved download function, which
+         * opens the image for the user to save and share manually.
          */
         shareImageBtn.addEventListener('click', async () => {
             const originalText = shareImageBtn.innerHTML;
@@ -301,36 +307,38 @@
 
             try {
                 const canvas = await generateCanvasFromCard();
-                if(!canvas) throw new Error("Impossible de générer le canvas.");
+                if(!canvas) throw new Error("Could not generate canvas.");
 
-                // L'API de partage nécessite un "blob", nous le créons donc à partir du canvas
                 const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-                if(!blob) throw new Error("Impossible de convertir le canvas en blob.");
+                if(!blob) throw new Error("Could not convert canvas to blob.");
 
                 const file = new File([blob], `shifaa-request-${getRequestId() || 'file'}.png`, { type: 'image/png' });
                 const shareData = {
                     title: 'طلب تبرع بالدم عاجل',
-                    text: `حالة عاجلة، فصيلة: ${requestDataForShare.bloodType}\nالمستشفى: ${requestDataForShare.hospital}\nللتفاصيل: ${window.location.href}`,
+                    text: `حالة عاجلة، فصيلة: ${requestDataForShare.bloodType}\nالمستشفى: ${requestDataForShare.hospital}`,
                     files: [file]
                 };
 
-                // Vérifie si le partage de fichiers est pris en charge
+                // Check if sharing files is supported. This will open the native Android share dialog.
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
                     await navigator.share(shareData);
                 } else {
-                    // Solution de repli robuste : informe l'utilisateur et déclenche le téléchargement
-                    showToast('مشاركة الصور غير مدعومة، سيتم تحميل الصورة بدلاً من ذلك.');
-                    downloadBtn.click(); // Utilise notre nouvelle fonction de téléchargement fiable
+                    // Robust fallback for WebViews: inform the user and trigger the reliable download method.
+                    showToast('مشاركة الصور غير مدعومة، سيتم فتح الصورة لتحميلها.');
+                    downloadBtn.click(); // Use our improved download function.
                 }
             } catch (err) {
-                console.error("Image share failed:", err);
-                showToast("فشلت مشاركة الصورة.");
+                 if (err.name !== 'AbortError') {
+                    console.error("Image share failed:", err);
+                    showToast("فشلت مشاركة الصورة.");
+                }
             } finally {
                 shareImageBtn.innerHTML = originalText;
                 shareImageBtn.disabled = false;
             }
         });
         
+        // Initial fetch
         fetchRequestDetails(getRequestId());
     </script>
 </body>

@@ -5,66 +5,79 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة تحكم أداة شفاء</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Cairo', sans-serif; }
+        body { font-family: 'Cairo', sans-serif; transition: background-color 0.3s; }
         .tab-active { border-color: #0d9488; color: #0d9488; background-color: #f0fdfa; }
         .suggestion-image {
-            width: 100px;
-            height: 100px;
-            object-fit: cover;
-            border-radius: 8px;
-            cursor: pointer;
-            border: 2px solid #e5e7eb;
-            transition: transform 0.2s;
+            width: 100px; height: 100px; object-fit: cover; border-radius: 8px;
+            cursor: pointer; border: 2px solid #e5e7eb; transition: transform 0.2s, border-color 0.2s;
         }
-        .suggestion-image:hover {
-            transform: scale(1.05);
-            border-color: #0d9488;
-        }
+        .suggestion-image:hover { transform: scale(1.05); border-color: #0d9488; }
         .image-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center;
+            z-index: 1000; animation: fadeIn 0.3s;
         }
-        .image-modal img {
-            max-width: 90%;
-            max-height: 90%;
-            border-radius: 10px;
-        }
+        .image-modal img { max-width: 90%; max-height: 90%; border-radius: 10px; }
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #fff; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; margin-left: 8px; }
+        .input-icon { position: absolute; top: 50%; left: 12px; transform: translateY(-50%); color: #9ca3af; }
+        .password-toggle { cursor: pointer; color: #6b7280; }
+        .input-valid { border-color: #10b981; }
+        .input-invalid { border-color: #ef4444; }
+        .validation-message { font-size: 0.8rem; height: 1.2rem; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-gray-50 text-gray-800">
 
-    <header class="bg-white shadow-md">
-        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
             <h1 class="text-2xl font-bold text-teal-600">لوحة تحكم شفاء</h1>
             <div>
-                <a href="index.html" class="text-sm text-gray-600 hover:text-teal-600 ml-4">الرئيسية</a>
-                <button id="logout-button" class="hidden bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 px-4 rounded-lg">الخروج</button>
+                <a href="index.html" class="text-sm text-gray-600 hover:text-teal-600 ml-4 transition-colors">الرئيسية</a>
+                <button id="logout-button" class="hidden bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 px-4 rounded-lg transition-transform duration-200 hover:scale-105">
+                    <i class="fas fa-sign-out-alt ml-2"></i>الخروج
+                </button>
             </div>
         </div>
     </header>
 
-    <main class="container mx-auto px-4 py-8">
-        <div id="admin-login-section" class="max-w-md mx-auto bg-white p-8 rounded-xl shadow-lg">
-            <h2 class="text-2xl font-bold mb-6 text-center">تسجيل دخول المشرف</h2>
-            <form id="login-form">
-                <input type="email" id="login-email" placeholder="البريد الإلكتروني" class="mb-4 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" required>
-                <input type="password" id="login-password" placeholder="كلمة المرور" class="mb-4 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" required>
-                <button type="submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg">دخول</button>
-            </form>
-            <p id="login-error" class="text-red-500 text-center mt-4"></p>
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div id="admin-login-section" class="max-w-md mx-auto mt-10">
+            <div class="bg-white p-8 rounded-xl shadow-lg">
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">تسجيل دخول المشرف</h2>
+                    <p class="text-gray-500 mt-1">أهلاً بك مجدداً!</p>
+                </div>
+                <form id="login-form" class="space-y-3">
+                    <div>
+                        <label for="login-email" class="sr-only">البريد الإلكتروني</label>
+                        <div class="relative">
+                            <i class="fas fa-envelope input-icon"></i>
+                            <input type="email" id="login-email" placeholder="البريد الإلكتروني" class="w-full pr-4 pl-10 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 transition" required>
+                        </div>
+                        <p id="email-validation" class="validation-message text-red-500 mt-1"></p>
+                    </div>
+                    <div>
+                        <label for="login-password" class="sr-only">كلمة المرور</label>
+                        <div class="relative">
+                            <i class="fas fa-lock input-icon"></i>
+                            <input type="password" id="login-password" placeholder="كلمة المرور" class="w-full pr-4 pl-10 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 transition" required>
+                            <span id="password-toggle-icon" class="absolute top-1/2 right-3 -translate-y-1/2 password-toggle">
+                                <i class="fas fa-eye"></i>
+                            </span>
+                        </div>
+                         <p id="password-validation" class="validation-message text-red-500 mt-1"></p>
+                    </div>
+                    <button id="login-submit-btn" type="submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-300 disabled:bg-gray-400">
+                        <span id="login-btn-text">دخول</span>
+                    </button>
+                </form>
+                <p id="login-error" class="text-red-600 text-center mt-4 font-semibold"></p>
+            </div>
         </div>
         
         <div id="admin-dashboard-container" class="hidden">
@@ -77,44 +90,52 @@
             </div>
 
             <div id="requests-panel">
-                <h2 class="text-2xl font-bold mb-4 text-center text-gray-700">جميع الطلبات المبلغ عنها</h2>
-                <div id="requests-dashboard" class="space-y-4"></div>
+                <h2 class="text-2xl font-bold mb-6 text-center text-gray-700">جميع الطلبات المبلغ عنها</h2>
+                <div id="requests-dashboard" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4"></div>
             </div>
 
             <div id="centers-panel" class="hidden">
-                <h2 class="text-2xl font-bold mb-4 text-center text-gray-700">إدارة أماكن التبرع</h2>
-                <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
-                    <form id="center-form" class="space-y-4">
-                        <input type="hidden" id="center-id">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label for="center-name" class="block font-semibold">اسم المركز</label>
-                                <input type="text" id="center-name" class="mt-1 w-full px-4 py-2 border rounded-lg" required>
-                            </div>
-                            <div>
-                                <label for="center-wilaya" class="block font-semibold">الولاية</label>
-                                <input type="text" id="center-wilaya" class="mt-1 w-full px-4 py-2 border rounded-lg" required>
-                            </div>
+                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-1">
+                        <h2 class="text-2xl font-bold text-gray-700 mb-4">إضافة أو تحديث مركز</h2>
+                        <div class="bg-white p-6 rounded-xl shadow-lg sticky top-24">
+                            <form id="center-form" class="space-y-4">
+                                <input type="hidden" id="center-id">
+                                <div>
+                                    <label for="center-name" class="block font-semibold text-sm mb-1">اسم المركز</label>
+                                    <input type="text" id="center-name" class="w-full px-4 py-2 border rounded-lg" required>
+                                </div>
+                                <div>
+                                    <label for="center-wilaya" class="block font-semibold text-sm mb-1">الولاية</label>
+                                    <input type="text" id="center-wilaya" class="w-full px-4 py-2 border rounded-lg" required>
+                                </div>
+                                <div>
+                                    <label for="center-location-url" class="block font-semibold text-sm mb-1">رابط الموقع (خرائط جوجل)</label>
+                                    <input type="url" id="center-location-url" placeholder="https://maps.app.goo.gl/..." class="w-full px-4 py-2 border rounded-lg" dir="ltr">
+                                </div>
+                                <div>
+                                    <label for="center-image" class="block font-semibold text-sm mb-1">صورة المركز (اختياري)</label>
+                                    <input type="file" id="center-image" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100" accept="image/*">
+                                    <img id="image-preview" src="" class="hidden w-24 h-24 object-cover rounded-lg mt-2 border">
+                                </div>
+                                <button type="submit" id="center-submit-btn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition">
+                                    <span id="btn-text">إضافة مركز</span>
+                                </button>
+                                <button type="button" id="cancel-edit-btn" class="hidden w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition mt-2">
+                                    إلغاء التعديل
+                                </button>
+                            </form>
                         </div>
-                        <div>
-                            <label for="center-location-url" class="block font-semibold">رابط الموقع (خرائط جوجل)</label>
-                            <input type="url" id="center-location-url" placeholder="https://maps.app.goo.gl/..." class="mt-1 w-full px-4 py-2 border rounded-lg" dir="ltr">
-                        </div>
-                        <div>
-                            <label for="center-image" class="block font-semibold">صورة المركز (اختياري)</label>
-                            <input type="file" id="center-image" class="mt-1 w-full p-2 border rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100" accept="image/*">
-                            <img id="image-preview" src="" class="hidden w-24 h-24 object-cover rounded-lg mt-2 border">
-                        </div>
-                        <button type="submit" id="center-submit-btn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center">
-                            <span id="btn-text">إضافة مركز</span>
-                        </button>
-                    </form>
+                    </div>
+                    <div class="lg:col-span-2">
+                        <h2 class="text-2xl font-bold text-gray-700 mb-4">قائمة المراكز</h2>
+                        <div id="centers-list" class="space-y-3"></div>
+                    </div>
                 </div>
-                <div id="centers-list" class="space-y-3"></div>
             </div>
             
             <div id="suggestions-panel" class="hidden">
-                <h2 class="text-2xl font-bold mb-4 text-center text-gray-700">الاقتراحات والملاحظات الواردة</h2>
+                <h2 class="text-2xl font-bold mb-6 text-center text-gray-700">الاقتراحات والملاحظات الواردة</h2>
                 <div id="suggestions-dashboard" class="space-y-4"></div>
             </div>
         </div>
@@ -124,20 +145,18 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        // --- تعديل: تم استيراد الدوال اللازمة لتثبيت جلسة الدخول
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, query, doc, deleteDoc, updateDoc, addDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
+        // --- Firebase Config ---
         const firebaseConfig = {
-          apiKey: "AIzaSyBjGbfd-myjqLtqvdMp4b-h4LIaeZjfUto",
-          authDomain: "altabarue-bialdam.firebaseapp.com",
-          databaseURL: "https://altabarue-bialdam-default-rtdb.firebaseio.com",
-          projectId: "altabarue-bialdam",
-          storageBucket: "altabarue-bialdam.appspot.com",
-          messagingSenderId: "1032387539358",
-          appId: "1:1032387539358:web:229d33a9d5a0f522c9268f",
-          measurementId: "G-GQ6M7F21PZ"
+            apiKey: "AIzaSyBjGbfd-myjqLtqvdMp4b-h4LIaeZjfUto",
+            authDomain: "altabarue-bialdam.firebaseapp.com",
+            projectId: "altabarue-bialdam",
+            storageBucket: "altabarue-bialdam.appspot.com",
+            messagingSenderId: "1032387539358",
+            appId: "1:1032387539358:web:229d33a9d5a0f522c9268f",
         };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -145,108 +164,177 @@
         const storage = getStorage(app);
 
         // --- DOM Elements ---
-        const loginSection = document.getElementById('admin-login-section');
-        const dashboardContainer = document.getElementById('admin-dashboard-container');
-        const logoutButton = document.getElementById('logout-button');
-        const loginForm = document.getElementById('login-form');
-        const loginError = document.getElementById('login-error');
-        const requestsPanel = document.getElementById('requests-panel');
-        const centersPanel = document.getElementById('centers-panel');
-        const suggestionsPanel = document.getElementById('suggestions-panel');
-        const tabRequests = document.getElementById('tab-requests');
-        const tabCenters = document.getElementById('tab-centers');
-        const tabSuggestions = document.getElementById('tab-suggestions');
-        const requestsDashboard = document.getElementById('requests-dashboard');
-        const suggestionsDashboard = document.getElementById('suggestions-dashboard');
-        const centerForm = document.getElementById('center-form');
-        const centersList = document.getElementById('centers-list');
-        const centerSubmitBtn = document.getElementById('center-submit-btn');
-        const imageModalContainer = document.getElementById('image-modal-container');
-        const imagePreview = document.getElementById('image-preview');
-        const centerImageInput = document.getElementById('center-image');
+        const ui = {
+            login: {
+                section: document.getElementById('admin-login-section'),
+                form: document.getElementById('login-form'),
+                email: document.getElementById('login-email'),
+                password: document.getElementById('login-password'),
+                submitBtn: document.getElementById('login-submit-btn'),
+                btnText: document.getElementById('login-btn-text'),
+                errorMsg: document.getElementById('login-error'),
+                emailValidation: document.getElementById('email-validation'),
+                passwordValidation: document.getElementById('password-validation'),
+                passwordToggle: document.getElementById('password-toggle-icon'),
+            },
+            dashboard: {
+                container: document.getElementById('admin-dashboard-container'),
+                logoutButton: document.getElementById('logout-button'),
+                tabs: {
+                    requests: document.getElementById('tab-requests'),
+                    centers: document.getElementById('tab-centers'),
+                    suggestions: document.getElementById('tab-suggestions'),
+                },
+                panels: {
+                    requests: document.getElementById('requests-panel'),
+                    centers: document.getElementById('centers-panel'),
+                    suggestions: document.getElementById('suggestions-panel'),
+                },
+                requestsDashboard: document.getElementById('requests-dashboard'),
+                suggestionsDashboard: document.getElementById('suggestions-dashboard'),
+                centersList: document.getElementById('centers-list'),
+            },
+            centerForm: {
+                form: document.getElementById('center-form'),
+                id: document.getElementById('center-id'),
+                name: document.getElementById('center-name'),
+                wilaya: document.getElementById('center-wilaya'),
+                locationUrl: document.getElementById('center-location-url'),
+                imageInput: document.getElementById('center-image'),
+                imagePreview: document.getElementById('image-preview'),
+                submitBtn: document.getElementById('center-submit-btn'),
+                btnText: document.getElementById('btn-text'),
+                cancelBtn: document.getElementById('cancel-edit-btn'),
+            },
+            imageModalContainer: document.getElementById('image-modal-container'),
+        };
 
-        const escapeHTML = str => str ? str.replace(/[&<>"']/g, match => ({'&': '&','<': '<','>': '>','"': '"',"'": '''})[match]) : '';
+        const escapeHTML = str => str ? str.replace(/[&<>"']/g, match => ({'&': '&amp;','<': '&lt;','>': '&gt;','"': '&quot;',"'": '&#39;'})[match]) : '';
 
+        // --- REAL-TIME LOGIN VALIDATION ---
+        const validateLogin = () => {
+            const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ui.login.email.value);
+            const isPasswordValid = ui.login.password.value.length >= 6;
+
+            ui.login.email.classList.toggle('input-valid', isEmailValid);
+            ui.login.email.classList.toggle('input-invalid', !isEmailValid && ui.login.email.value.length > 0);
+            ui.login.emailValidation.textContent = isEmailValid || ui.login.email.value.length === 0 ? '' : 'صيغة البريد الإلكتروني غير صحيحة.';
+            
+            ui.login.password.classList.toggle('input-valid', isPasswordValid);
+            ui.login.password.classList.toggle('input-invalid', !isPasswordValid && ui.login.password.value.length > 0);
+            ui.login.passwordValidation.textContent = isPasswordValid || ui.login.password.value.length === 0 ? '' : 'كلمة المرور يجب أن تكون 6 أحرف على الأقل.';
+
+            ui.login.submitBtn.disabled = !(isEmailValid && isPasswordValid);
+        };
+        ui.login.email.addEventListener('input', validateLogin);
+        ui.login.password.addEventListener('input', validateLogin);
+        ui.login.passwordToggle.addEventListener('click', () => {
+            const isPassword = ui.login.password.type === 'password';
+            ui.login.password.type = isPassword ? 'text' : 'password';
+            ui.login.passwordToggle.innerHTML = `<i class="fas ${isPassword ? 'fa-eye-slash' : 'fa-eye'}"></i>`;
+        });
+        
         // --- Auth Logic ---
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                loginSection.classList.add('hidden');
-                dashboardContainer.classList.remove('hidden');
-                logoutButton.classList.remove('hidden');
-                listenToRequests();
-                listenToCenters();
-                listenToSuggestions();
+                ui.login.section.classList.add('hidden');
+                ui.dashboard.container.classList.remove('hidden');
+                ui.dashboard.logoutButton.classList.remove('hidden');
+                initDashboard();
             } else {
-                loginSection.classList.remove('hidden');
-                dashboardContainer.classList.add('hidden');
-                logoutButton.classList.add('hidden');
+                ui.login.section.classList.remove('hidden');
+                ui.dashboard.container.classList.add('hidden');
+                ui.dashboard.logoutButton.classList.add('hidden');
+                validateLogin(); // Set initial button state
             }
         });
-        
-        // --- تعديل: تم تحديث دالة تسجيل الدخول لتشمل خاصية الاحتفاظ بالجلسة
-        loginForm.addEventListener('submit', (e) => {
+
+        ui.login.form.addEventListener('submit', (e) => {
             e.preventDefault();
-            const email = loginForm['login-email'].value;
-            const password = loginForm['login-password'].value;
+            const { email, password, submitBtn, btnText, errorMsg } = ui.login;
             
-            // ضبط حالة استمرارية تسجيل الدخول (للحفظ في المتصفح)
+            const originalText = btnText.textContent;
+            btnText.textContent = 'جاري الدخول...';
+            const loader = document.createElement('div');
+            loader.className = 'loader';
+            submitBtn.appendChild(loader);
+            submitBtn.disabled = true;
+            errorMsg.textContent = '';
+
             setPersistence(auth, browserLocalPersistence)
-                .then(() => {
-                    // الآن قم بتسجيل الدخول
-                    return signInWithEmailAndPassword(auth, email, password);
-                })
+                .then(() => signInWithEmailAndPassword(auth, email.value, password.value))
                 .catch((error) => {
-                    // معالجة الأخطاء
                     console.error("Login Error:", error);
-                    loginError.textContent = 'بيانات الدخول غير صحيحة.';
+                    errorMsg.textContent = 'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
+                    btnText.textContent = originalText;
+                    submitBtn.removeChild(loader);
+                    validateLogin(); // Re-enable button if form is valid
                 });
         });
 
-        logoutButton.addEventListener('click', () => signOut(auth));
+        ui.dashboard.logoutButton.addEventListener('click', () => signOut(auth));
 
-        function switchTab(activeTab, activePanel) {
-            [tabRequests, tabCenters, tabSuggestions].forEach(tab => tab.classList.remove('tab-active'));
-            [requestsPanel, centersPanel, suggestionsPanel].forEach(panel => panel.classList.add('hidden'));
-            activeTab.classList.add('tab-active');
-            activePanel.classList.remove('hidden');
+        // --- Dashboard Initialization ---
+        function initDashboard() {
+            listenToRequests();
+            listenToCenters();
+            listenToSuggestions();
+            setupTabListeners();
         }
-        tabRequests.addEventListener('click', () => switchTab(tabRequests, requestsPanel));
-        tabCenters.addEventListener('click', () => switchTab(tabCenters, centersPanel));
-        tabSuggestions.addEventListener('click', () => switchTab(tabSuggestions, suggestionsPanel));
+
+        // --- UI & Tabs ---
+        function setupTabListeners() {
+            const tabs = [ui.dashboard.tabs.requests, ui.dashboard.tabs.centers, ui.dashboard.tabs.suggestions];
+            const panels = [ui.dashboard.panels.requests, ui.dashboard.panels.centers, ui.dashboard.panels.suggestions];
+            
+            tabs.forEach((tab, index) => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('tab-active'));
+                    panels.forEach(p => p.classList.add('hidden'));
+                    tab.classList.add('tab-active');
+                    panels[index].classList.remove('hidden');
+                });
+            });
+        }
         
-        function showImageModal(src) {
-            imageModalContainer.innerHTML = `<div class="image-modal"><img src="${src}"></div>`;
-            imageModalContainer.firstChild.addEventListener('click', () => imageModalContainer.innerHTML = '');
+        window.showImageModal = (src) => {
+            ui.imageModalContainer.innerHTML = `<div class="image-modal"><img src="${src}"></div>`;
+            ui.imageModalContainer.firstChild.addEventListener('click', () => ui.imageModalContainer.innerHTML = '');
         }
 
+        // --- Requests Management ---
         const createRequestCardHTML = (doc) => {
             const request = doc.data();
             const date = request.createdAt ? new Date(request.createdAt.seconds * 1000).toLocaleString('ar-DZ') : 'غير متوفر';
-            const detailsHTML = request.details ? `<blockquote class="mt-2 p-2 bg-gray-50 border-r-4">${escapeHTML(request.details)}</blockquote>` : '';
+            const detailsHTML = request.details ? `<blockquote class="mt-2 p-2 bg-gray-50 border-r-4 text-sm">${escapeHTML(request.details)}</blockquote>` : '';
             const reportsCount = request.reports || 0;
-            const reportReasons = request.reportReasons || [];
+            const reportReasons = Array.isArray(request.reportReasons) ? request.reportReasons : [];
             const reportsHTML = reportsCount > 0 
-                ? `<div class="mt-3 p-3 bg-amber-50 border-l-4 border-amber-400"><p class="text-amber-800 font-bold flex items-center gap-2"><i class="fas fa-flag"></i> تم الإبلاغ عنه ${reportsCount} ${reportsCount > 1 ? 'مرات' : 'مرة'}</p><ul class="list-disc list-inside text-sm text-amber-700 mt-2 space-y-1">${reportReasons.map(reason => `<li>${escapeHTML(reason)}</li>`).join('')}</ul></div>` : '';
+                ? `<div class="mt-3 p-3 bg-amber-50 border-l-4 border-amber-400 rounded-md"><p class="text-amber-800 font-bold flex items-center gap-2 text-sm"><i class="fas fa-flag"></i> تم الإبلاغ عنه ${reportsCount} ${reportsCount > 1 ? 'مرات' : 'مرة'}</p><ul class="list-disc list-inside text-xs text-amber-700 mt-2 space-y-1">${reportReasons.map(reason => `<li>${escapeHTML(reason)}</li>`).join('')}</ul></div>` : '';
             
-            return `<div class="bg-white p-4 rounded-xl shadow-md border-r-4 ${request.verified ? 'border-green-500' : 'border-gray-300'}">
-                        <div class="flex flex-wrap justify-between items-start gap-2 mb-3">
-                            <div>
-                                <h3 class="text-lg font-bold">${escapeHTML(request.hospital)} (${escapeHTML(request.wilaya)})</h3>
-                                <p class="text-gray-600" dir="ltr">${escapeHTML(request.phone1)}</p>
+            return `<div class="bg-white p-4 rounded-xl shadow-md border-r-4 ${request.verified ? 'border-green-500' : 'border-gray-300'} flex flex-col justify-between">
+                        <div>
+                            <div class="flex flex-wrap justify-between items-start gap-2 mb-3">
+                                <div>
+                                    <h3 class="text-lg font-bold">${escapeHTML(request.hospital)} (${escapeHTML(request.wilaya)})</h3>
+                                    <p class="text-gray-600" dir="ltr">${escapeHTML(request.phone1)}</p>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <span class="text-sm text-green-600 flex items-center gap-1"><i class="fas fa-thumbs-up"></i> ${request.likes || 0}</span>
+                                    <span class="text-sm text-rose-600 flex items-center gap-1"><i class="fas fa-thumbs-down"></i> ${request.dislikes || 0}</span>
+                                    <span class="font-bold text-rose-600 text-2xl">${escapeHTML(request.bloodType)}</span>
+                                </div>
                             </div>
-                            <div class="flex items-center gap-4">
-                                <span class="text-sm text-green-600 flex items-center gap-1"><i class="fas fa-thumbs-up"></i> ${request.likes || 0}</span>
-                                <span class="text-sm text-rose-600 flex items-center gap-1"><i class="fas fa-thumbs-down"></i> ${request.dislikes || 0}</span>
-                                <span class="font-bold text-rose-600 text-lg">${escapeHTML(request.bloodType)}</span>
-                            </div>
+                            ${detailsHTML}
+                            ${reportsHTML}
                         </div>
-                        ${detailsHTML}
-                        ${reportsHTML}
-                        <div class="flex justify-between items-center text-sm text-gray-500 mt-3 border-t pt-3">
+                        <div class="text-sm text-gray-500 mt-3 border-t pt-3 flex justify-between items-center">
                             <p>أضيف في: ${date}</p>
                             <div class="flex items-center gap-2">
-                                <button data-id="${doc.id}" data-verified="${request.verified}" class="verify-btn ${request.verified ? 'bg-yellow-500' : 'bg-green-600'} text-white py-1 px-3 rounded-lg">${request.verified ? 'إلغاء التوثيق' : 'توثيق'}</button>
-                                <button data-id="${doc.id}" class="delete-btn bg-rose-600 text-white py-1 px-3 rounded-lg">حذف</button>
+                                <button data-id="${doc.id}" data-verified="${request.verified}" class="verify-btn ${request.verified ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-600 hover:bg-green-700'} text-white py-1 px-3 rounded-lg text-xs font-semibold transition">
+                                    ${request.verified ? 'إلغاء التوثيق' : 'توثيق'}
+                                </button>
+                                <button data-id="${doc.id}" class="delete-btn bg-rose-600 hover:bg-rose-700 text-white py-1 px-3 rounded-lg text-xs font-semibold transition">حذف</button>
                             </div>
                         </div>
                     </div>`;
@@ -254,11 +342,10 @@
         const listenToRequests = () => {
             const q = query(collection(db, 'donation_requests'), orderBy('createdAt', 'desc'));
             onSnapshot(q, (snapshot) => {
-                requestsDashboard.innerHTML = snapshot.empty ? `<p class="text-center text-gray-500 p-6">لا توجد طلبات.</p>` : '';
-                snapshot.docs.forEach(doc => requestsDashboard.innerHTML += createRequestCardHTML(doc));
+                ui.dashboard.requestsDashboard.innerHTML = snapshot.empty ? `<p class="text-center text-gray-500 p-6 col-span-full">لا توجد طلبات.</p>` : snapshot.docs.map(createRequestCardHTML).join('');
             });
         };
-        requestsDashboard.addEventListener('click', async (e) => {
+        ui.dashboard.requestsDashboard.addEventListener('click', async (e) => {
             const btn = e.target.closest('button');
             if (!btn) return;
             const docId = btn.dataset.id;
@@ -268,69 +355,79 @@
         });
 
         // --- Centers Management ---
+        const resetCenterForm = () => {
+            ui.centerForm.form.reset();
+            ui.centerForm.id.value = '';
+            ui.centerForm.imagePreview.classList.add('hidden');
+            ui.centerForm.imagePreview.src = '';
+            ui.centerForm.btnText.textContent = 'إضافة مركز';
+            ui.centerForm.submitBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+            ui.centerForm.submitBtn.classList.add('bg-teal-600', 'hover:bg-teal-700');
+            ui.centerForm.cancelBtn.classList.add('hidden');
+        };
+
         const listenToCenters = () => {
             onSnapshot(query(collection(db, 'donation_centers'), orderBy('name')), (snapshot) => {
-                centersList.innerHTML = snapshot.empty ? `<p class="text-center text-gray-500 p-6">لا توجد مراكز مضافة.</p>` : '';
-                snapshot.docs.forEach(doc => {
+                ui.dashboard.centersList.innerHTML = snapshot.empty ? `<p class="text-center text-gray-500 p-6">لا توجد مراكز مضافة.</p>` : snapshot.docs.map(doc => {
                     const center = doc.data();
-                    centersList.innerHTML += `<div class="bg-white p-3 rounded-lg shadow-sm flex justify-between items-center gap-4">
-                        <img src="${center.imageUrl || 'https://via.placeholder.com/80'}" class="w-16 h-16 object-cover rounded-lg flex-shrink-0">
+                    return `<div class="bg-white p-3 rounded-lg shadow-sm flex items-center gap-4">
+                        <img src="${center.imageUrl || 'https://via.placeholder.com/80'}" class="w-16 h-16 object-cover rounded-lg flex-shrink-0 border">
                         <div class="flex-grow">
                             <p class="font-bold">${escapeHTML(center.name)}</p>
                             <p class="text-sm text-gray-500">${escapeHTML(center.wilaya)}</p>
                         </div>
                         <div class="flex gap-2 flex-shrink-0">
-                            <button data-id="${doc.id}" data-doc='${JSON.stringify(center)}' class="edit-center-btn bg-gray-200 text-gray-700 py-1 px-3 rounded-lg text-sm">تعديل</button>
-                            <button data-id="${doc.id}" class="delete-center-btn bg-rose-500 text-white py-1 px-3 rounded-lg text-sm">حذف</button>
+                            <button data-id="${doc.id}" data-doc='${JSON.stringify(center)}' class="edit-center-btn bg-gray-200 hover:bg-gray-300 text-gray-700 py-1 px-3 rounded-lg text-sm transition">تعديل</button>
+                            <button data-id="${doc.id}" class="delete-center-btn bg-rose-500 hover:bg-rose-600 text-white py-1 px-3 rounded-lg text-sm transition">حذف</button>
                         </div>
                     </div>`;
-                });
+                }).join('');
             });
         };
         
-        centerImageInput.addEventListener('change', (e) => {
+        ui.centerForm.imageInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
                 reader.onload = (event) => {
-                    imagePreview.src = event.target.result;
-                    imagePreview.classList.remove('hidden');
+                    ui.centerForm.imagePreview.src = event.target.result;
+                    ui.centerForm.imagePreview.classList.remove('hidden');
                 };
                 reader.readAsDataURL(file);
             }
         });
 
-        centerForm.addEventListener('submit', async (e) => {
+        ui.centerForm.form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btnText = document.getElementById('btn-text');
-            centerSubmitBtn.disabled = true;
+            const { submitBtn, btnText, name, wilaya, locationUrl, imageInput, id, imagePreview } = ui.centerForm;
+            
+            submitBtn.disabled = true;
             btnText.textContent = 'جاري الحفظ...';
             const loader = document.createElement('div');
             loader.className = 'loader';
-            centerSubmitBtn.appendChild(loader);
+            submitBtn.appendChild(loader);
 
-            const id = document.getElementById('center-id').value;
-            const file = centerImageInput.files[0];
-            let imageUrl = document.getElementById('image-preview').src;
-
-            if (file) {
-                const storageRef = ref(storage, `centers/${Date.now()}_${file.name}`);
-                const snapshot = await uploadBytes(storageRef, file);
-                imageUrl = await getDownloadURL(snapshot.ref);
-            } else if (!id) {
-                imageUrl = ''; // No image for new entry if none selected
-            }
-            
-            const data = { 
-                name: centerForm['center-name'].value, 
-                wilaya: centerForm['center-wilaya'].value,
-                locationUrl: centerForm['center-location-url'].value,
-                imageUrl: imageUrl
-            };
+            const file = imageInput.files[0];
+            let imageUrl = imagePreview.src;
 
             try {
-                if (id) {
-                    await updateDoc(doc(db, 'donation_centers', id), data);
+                if (file) {
+                    const storageRef = ref(storage, `centers/${Date.now()}_${file.name}`);
+                    const snapshot = await uploadBytes(storageRef, file);
+                    imageUrl = await getDownloadURL(snapshot.ref);
+                } else if (!id.value) {
+                    imageUrl = ''; 
+                }
+                
+                const data = { 
+                    name: name.value, 
+                    wilaya: wilaya.value,
+                    locationUrl: locationUrl.value,
+                    imageUrl: imageUrl
+                };
+
+                if (id.value) {
+                    await updateDoc(doc(db, 'donation_centers', id.value), data);
                 } else {
                     await addDoc(collection(db, 'donation_centers'), data);
                 }
@@ -338,43 +435,47 @@
                 console.error("Error saving center: ", error);
                 alert("حدث خطأ أثناء حفظ المركز.");
             } finally {
-                centerForm.reset();
-                document.getElementById('center-id').value = '';
-                imagePreview.classList.add('hidden');
-                imagePreview.src = '';
-                btnText.textContent = 'إضافة مركز';
-                centerSubmitBtn.classList.replace('bg-blue-600', 'bg-teal-600');
-                if (centerSubmitBtn.querySelector('.loader')) {
-                    centerSubmitBtn.querySelector('.loader').remove();
+                resetCenterForm();
+                if (submitBtn.querySelector('.loader')) {
+                    submitBtn.removeChild(loader);
                 }
-                centerSubmitBtn.disabled = false;
+                submitBtn.disabled = false;
             }
         });
 
-        centersList.addEventListener('click', async (e) => {
+        ui.dashboard.centersList.addEventListener('click', async (e) => {
             const btn = e.target.closest('button');
             if (!btn) return;
             const docId = btn.dataset.id;
             if (btn.classList.contains('edit-center-btn')) {
                 const data = JSON.parse(btn.dataset.doc);
-                document.getElementById('center-id').value = docId;
-                document.getElementById('center-name').value = data.name;
-                document.getElementById('center-wilaya').value = data.wilaya;
-                document.getElementById('center-location-url').value = data.locationUrl || '';
+                const { id, name, wilaya, locationUrl, imagePreview, btnText, submitBtn, cancelBtn } = ui.centerForm;
+                id.value = docId;
+                name.value = data.name;
+                wilaya.value = data.wilaya;
+                locationUrl.value = data.locationUrl || '';
+                
                 if (data.imageUrl) {
                     imagePreview.src = data.imageUrl;
                     imagePreview.classList.remove('hidden');
                 } else {
                     imagePreview.classList.add('hidden');
                 }
-                document.getElementById('btn-text').textContent = 'تحديث المركز';
-                centerSubmitBtn.classList.replace('bg-teal-600', 'bg-blue-600');
-                window.scrollTo(0, 0);
+                
+                btnText.textContent = 'تحديث المركز';
+                submitBtn.classList.remove('bg-teal-600', 'hover:bg-teal-700');
+                submitBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                cancelBtn.classList.remove('hidden');
+                name.focus();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             }
             if (btn.classList.contains('delete-center-btn') && confirm('هل أنت متأكد من حذف هذا المركز؟')) {
                 await deleteDoc(doc(db, 'donation_centers', docId));
+                resetCenterForm();
             }
         });
+        
+        ui.centerForm.cancelBtn.addEventListener('click', resetCenterForm);
 
         // --- Suggestions Management ---
         const createSuggestionCardHTML = (doc) => {
@@ -390,26 +491,24 @@
             }
             const imagesHTML = suggestion.imageUrls && suggestion.imageUrls.length > 0
                 ? `<div class="mt-4"><p class="font-semibold mb-2">الصور المرفقة:</p><div class="flex flex-wrap gap-3">${suggestion.imageUrls.map(url => `<img src="${url}" class="suggestion-image" onclick="showImageModal('${url}')">`).join('')}</div></div>`
-                : '<p class="mt-4 text-sm text-gray-500">لا توجد صور مرفقة.</p>';
-            return `<div class="bg-white p-4 rounded-xl shadow-md"><div class="flex flex-wrap justify-between items-start gap-2 mb-3"><div><h3 class="text-lg font-bold">${title}</h3></div><span class="text-xs font-bold px-3 py-1 rounded-full ${badgeColor}">${suggestion.type === 'center_suggestion' ? 'اقتراح مركز' : 'اقتراح عام'}</span></div><div class="space-y-1 text-gray-700">${contentHTML}</div>${imagesHTML}<div class="flex justify-between items-center text-sm text-gray-500 mt-3 border-t pt-3"><p>أرسل في: ${date}</p><div class="flex items-center gap-2"><button data-id="${doc.id}" class="delete-suggestion-btn bg-rose-600 text-white py-1 px-3 rounded-lg">حذف</button></div></div></div>`;
+                : '';
+            return `<div class="bg-white p-4 rounded-xl shadow-md"><div class="flex flex-wrap justify-between items-start gap-2 mb-3"><div><h3 class="text-lg font-bold">${title}</h3></div><span class="text-xs font-bold px-3 py-1 rounded-full ${badgeColor}">${suggestion.type === 'center_suggestion' ? 'اقتراح مركز' : 'اقتراح عام'}</span></div><div class="space-y-1 text-gray-700">${contentHTML}</div>${imagesHTML}<div class="flex justify-between items-center text-sm text-gray-500 mt-3 border-t pt-3"><p>أرسل في: ${date}</p><button data-id="${doc.id}" class="delete-suggestion-btn bg-rose-600 hover:bg-rose-700 text-white py-1 px-3 rounded-lg text-xs font-semibold transition">حذف</button></div></div>`;
         };
         const listenToSuggestions = () => {
             const q = query(collection(db, 'suggestions'), orderBy('createdAt', 'desc'));
             onSnapshot(q, (snapshot) => {
-                suggestionsDashboard.innerHTML = snapshot.empty ? `<p class="text-center text-gray-500 p-6">لا توجد اقتراحات حالياً.</p>` : '';
-                snapshot.docs.forEach(doc => suggestionsDashboard.innerHTML += createSuggestionCardHTML(doc));
+                ui.dashboard.suggestionsDashboard.innerHTML = snapshot.empty ? `<p class="text-center text-gray-500 p-6">لا توجد اقتراحات حالياً.</p>` : snapshot.docs.map(createSuggestionCardHTML).join('');
             });
         };
-        suggestionsDashboard.addEventListener('click', async (e) => {
-            if (e.target.closest('button')?.classList.contains('delete-suggestion-btn')) {
-                const docId = e.target.closest('button').dataset.id;
+        ui.dashboard.suggestionsDashboard.addEventListener('click', async (e) => {
+            const btn = e.target.closest('button.delete-suggestion-btn');
+            if (btn) {
+                const docId = btn.dataset.id;
                 if (confirm('هل أنت متأكد من حذف هذا الاقتراح؟')) {
                     await deleteDoc(doc(db, 'suggestions', docId));
                 }
             }
         });
-        window.showImageModal = showImageModal;
-
     </script>
 </body>
 </html>
