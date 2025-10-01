@@ -18,6 +18,12 @@
         .overlay.active { opacity: 1; visibility: visible; }
         .vote-btn.voted-like { color: #0d9488; }
         .vote-btn.voted-dislike { color: #f43f5e; }
+        .modal { transition: opacity 0.25s ease; }
+        .modal-container { transition: transform 0.25s ease, opacity 0.25s ease; animation: scaleIn 0.3s ease-out; }
+         @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
     </style>
 </head>
 <body class="antialiased">
@@ -73,10 +79,35 @@
             <div id="dashboard" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         </section>
     </main>
+
+    <div id="report-reason-modal" class="modal fixed inset-0 flex items-center justify-center hidden z-50 p-4 bg-black/60">
+        <div class="modal-container bg-white w-full max-w-lg rounded-xl shadow-2xl relative my-8">
+            <button class="close-modal-btn absolute top-4 left-4 text-gray-500 hover:text-gray-800 text-2xl z-10">&times;</button>
+            <div class="p-6">
+                <h2 class="text-2xl font-bold text-center mb-6">الإبلاغ عن هذا الطلب</h2>
+                <form id="report-reason-form" class="space-y-4">
+                    <input type="hidden" id="report-request-id" name="requestId">
+                    <div>
+                        <label for="report-reason" class="font-semibold mb-2 block">ما هو سبب بلاغك؟ <span class="text-red-500">*</span></label>
+                        <textarea id="report-reason" name="reason" placeholder="مثال: الرقم غير صحيح، الحالة لم تعد بحاجة لمتبرعين، معلومات خاطئة..." class="w-full p-3 border rounded-lg h-32" required></textarea>
+                    </div>
+                    <button type="submit" id="submit-report-btn" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105">إرسال البلاغ</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="message-modal" class="modal fixed inset-0 flex items-center justify-center hidden z-50 p-4 bg-black/60">
+         <div class="modal-container bg-white w-full max-w-sm rounded-xl shadow-2xl p-8 text-center">
+            <i id="message-icon" class="fas fa-check-circle text-5xl text-green-500 mb-4"></i>
+            <p id="message-text" class="text-lg mb-6">تم إرسال بلاغك بنجاح. شكرًا لك.</p>
+            <button class="close-modal-btn bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-8 rounded-lg">حسنًا</button>
+        </div>
+    </div>
     
    <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, query, doc, updateDoc, increment, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, query, doc, updateDoc, increment, arrayUnion, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBjGbfd-myjqLtqvdMp4b-h4LIaeZjfUto",
@@ -100,6 +131,17 @@
     menuBtn.addEventListener('click', toggleMenu);
     closeBtn.addEventListener('click', toggleMenu);
     overlay.addEventListener('click', toggleMenu);
+
+    // --- START: MODAL LOGIC ---
+    const reportReasonModal = document.getElementById('report-reason-modal');
+    const messageModal = document.getElementById('message-modal');
+    const reportReasonForm = document.getElementById('report-reason-form');
+    const reportRequestIdInput = document.getElementById('report-request-id');
+    const toggleModal = (modal) => modal.classList.toggle('hidden');
+    document.querySelectorAll('.close-modal-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => toggleModal(e.target.closest('.modal')));
+    });
+    // --- END: MODAL LOGIC ---
 
     const votesManager = {
         votes: JSON.parse(localStorage.getItem('shifaa-votes')) || {},
@@ -167,7 +209,6 @@
     const sortOrderSelect = document.getElementById('sort-order');
     let allRequests = [];
 
-    // ============= MODIFIED FUNCTION ===============
     const createCardHTML = (doc) => {
         const request = doc.data();
         const date = request.createdAt ? new Date(request.createdAt.seconds * 1000).toLocaleDateString('ar-DZ') : 'غير متوفر';
@@ -198,8 +239,11 @@
                             </button>
                         </div>
                     </div>
-                     <div class="mt-4 pt-3 border-t">
-                        <a href="request-details.html?id=${doc.id}" class="w-full text-center bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold py-2 px-4 rounded-lg transition text-sm flex items-center justify-center gap-1">
+                     <div class="flex justify-between items-center mt-4 pt-3 border-t">
+                        <button data-id="${doc.id}" class="report-btn bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold py-1 px-3 rounded-lg transition text-xs">
+                            <i class="fas fa-flag"></i> إبلاغ
+                        </button>
+                        <a href="request-details.html?id=${doc.id}" class="bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold py-1 px-4 rounded-lg transition text-xs flex items-center gap-1">
                             <i class="fas fa-eye"></i> عرض التفاصيل
                         </a>
                     </div>
@@ -244,10 +288,41 @@
     
     dashboard.addEventListener('click', (e) => {
         const voteBtn = e.target.closest('.vote-btn');
+        const reportBtn = e.target.closest('.report-btn');
+
         if (voteBtn) {
             const requestId = voteBtn.dataset.id;
             const voteType = voteBtn.dataset.vote;
             handleVote(requestId, voteType);
+        } else if (reportBtn) {
+            const requestId = reportBtn.dataset.id;
+            reportRequestIdInput.value = requestId;
+            toggleModal(reportReasonModal);
+        }
+    });
+
+    reportReasonForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = document.getElementById('submit-report-btn');
+        if (submitBtn.disabled) return;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'جاري الإرسال...';
+        const requestId = reportRequestIdInput.value;
+        const reason = reportReasonForm.elements.reason.value;
+        const docRef = doc(db, 'donation_requests', requestId);
+        try {
+            await updateDoc(docRef, { reports: increment(1), reportReasons: arrayUnion(reason) });
+            toggleModal(reportReasonModal);
+            reportReasonForm.reset();
+            document.getElementById('message-text').textContent = 'تم إرسال بلاغك بنجاح. سيتم مراجعته قريبًا. شكرًا لك.';
+            document.getElementById('message-icon').className = 'fas fa-flag text-5xl text-amber-500 mb-4';
+            toggleModal(messageModal);
+        } catch (error) {
+            console.error("Error submitting report: ", error);
+            alert('حدث خطأ أثناء إرسال البلاغ.');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'إرسال البلاغ';
         }
     });
 

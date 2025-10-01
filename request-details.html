@@ -6,7 +6,7 @@
     <title>تفاصيل طلب التبرع - أداة شفاء</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display.swap" rel="stylesheet">
     
     <style>
         body { font-family: 'Cairo', sans-serif; background-color: #f0fdfa; }
@@ -23,10 +23,14 @@
         }
         #toast-notification.show { bottom: 30px; }
 
-        /* --- [بداية] شيفرة النافذة المنبثقة المضافة --- */
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        .modal { transition: opacity 0.25s ease; }
+        .modal-container { transition: transform 0.25s ease, opacity 0.25s ease; animation: scaleIn 0.3s ease-out; }
+         @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
 
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .modal-backdrop {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0, 0, 0, 0.7); z-index: 1000;
@@ -41,7 +45,6 @@
             animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); position: relative;
             border-radius: 1rem;
         }
-        /* --- [نهاية] شيفرة النافذة المنبثقة --- */
     </style>
 </head>
 <body>
@@ -63,19 +66,47 @@
             <div id="request-details" class="hidden"></div>
         </div>
 
-        <div id="action-buttons" class="hidden max-w-2xl mx-auto mt-8 text-center">
+        <div id="action-buttons" class="hidden max-w-2xl mx-auto mt-8 text-center space-y-4">
             <button id="show-share-modal-btn" class="w-full max-w-sm mx-auto bg-teal-600 text-white font-bold py-4 px-6 rounded-xl text-xl hover:bg-teal-700 transition-transform transform hover:scale-105 shadow-lg">
                 <i class="fas fa-share-alt mr-2"></i> مشاركة النداء
+            </button>
+            <button id="report-request-btn" class="w-full max-w-sm mx-auto bg-amber-500 text-white font-bold py-3 px-6 rounded-xl text-lg hover:bg-amber-600 transition-transform transform hover:scale-105 shadow-lg">
+                <i class="fas fa-flag mr-2"></i> الإبلاغ عن الطلب
             </button>
         </div>
     </main>
     
-    <div id="modal-container"></div>
+    <div id="share-modal-container"></div>
     <div id="toast-notification"></div>
+
+    <div id="report-reason-modal" class="modal fixed inset-0 flex items-center justify-center hidden z-50 p-4 bg-black/60">
+        <div class="modal-container bg-white w-full max-w-lg rounded-xl shadow-2xl relative my-8">
+            <button class="close-modal-btn absolute top-4 left-4 text-gray-500 hover:text-gray-800 text-2xl z-10">&times;</button>
+            <div class="p-6">
+                <h2 class="text-2xl font-bold text-center mb-6">الإبلاغ عن هذا الطلب</h2>
+                <form id="report-reason-form" class="space-y-4">
+                    <input type="hidden" id="report-request-id" name="requestId">
+                    <div>
+                        <label for="report-reason" class="font-semibold mb-2 block">ما هو سبب بلاغك؟ <span class="text-red-500">*</span></label>
+                        <textarea id="report-reason" name="reason" placeholder="مثال: الرقم غير صحيح، الحالة لم تعد بحاجة لمتبرعين، معلومات خاطئة..." class="w-full p-3 border rounded-lg h-32" required></textarea>
+                    </div>
+                    <button type="submit" id="submit-report-btn" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105">إرسال البلاغ</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="message-modal" class="modal fixed inset-0 flex items-center justify-center hidden z-50 p-4 bg-black/60">
+         <div class="modal-container bg-white w-full max-w-sm rounded-xl shadow-2xl p-8 text-center">
+            <i id="message-icon" class="fas fa-check-circle text-5xl text-green-500 mb-4"></i>
+            <p id="message-text" class="text-lg mb-6">تم إرسال بلاغك بنجاح. شكرًا لك.</p>
+            <button class="close-modal-btn bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-8 rounded-lg">حسنًا</button>
+        </div>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, increment, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyBjGbfd-myjqLtqvdMp4b-h4LIaeZjfUto",
@@ -92,9 +123,19 @@
         const requestDetailsContainer = document.getElementById('request-details');
         const actionButtons = document.getElementById('action-buttons');
         const toast = document.getElementById('toast-notification');
-        const modalContainer = document.getElementById('modal-container');
+        const shareModalContainer = document.getElementById('share-modal-container');
+        
+        // --- START: REPORTING ELEMENTS ---
+        const reportReasonModal = document.getElementById('report-reason-modal');
+        const messageModal = document.getElementById('message-modal');
+        const reportReasonForm = document.getElementById('report-reason-form');
+        const reportRequestIdInput = document.getElementById('report-request-id');
+        const reportRequestBtn = document.getElementById('report-request-btn');
+        // --- END: REPORTING ELEMENTS ---
 
         let requestData = {};
+
+        const toggleModal = (modal) => modal.classList.toggle('hidden');
 
         const showToast = (message) => {
             toast.textContent = message;
@@ -128,15 +169,6 @@
             else { urgencyText = 'غير مستعجل'; urgencyClass = 'bg-green-100 text-green-800'; }
             document.title = `طلب تبرع: ${data.bloodType} في ${data.hospital} - أداة شفاء`;
             
-            const shareUrl = window.location.href;
-            const shareText = `🚨 *طلب تبرع دم عاجل* 🚨\n\n*الفصيلة المطلوبة:* ${data.bloodType}\n*المستشفى:* ${data.hospital}, ${data.wilaya}\n*للتواصل المباشر:* ${data.phone1}\n\n*لمزيد من التفاصيل عبر الرابط:*\n${shareUrl}`;
-            
-            // --- Social Share Links ---
-            const whatsappLink = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
-            const telegramLink = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
-            const facebookLink = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
-            const messengerLink = `fb-messenger://share/?link=${encodeURIComponent(shareUrl)}`;
-
             requestDetailsContainer.innerHTML = `
                 <div id="request-card" class="bg-white p-6 sm:p-8 rounded-2xl details-card overflow-hidden">
                     <div class="flex justify-between items-center pb-4 border-b">
@@ -153,29 +185,8 @@
                         <div class="flex items-start gap-3"><i class="fas fa-hospital text-2xl text-gray-400 mt-1"></i>
                             <div><h3 class="text-lg font-bold text-gray-800 ${data.verified ? 'verified' : ''}">${data.hospital}</h3><p class="text-gray-600">${data.wilaya}, ${data.location}</p></div>
                         </div>
-                        <div class="flex items-center gap-3"><i class="fas fa-phone text-2xl text-gray-400"></i><span class="text-blue-600 text-xl font-semibold tracking-wider" dir="ltr">${data.phone1}</span></div>
-                        
-                        <div class="border-t pt-4">
-                            <p class="text-center text-sm font-semibold text-gray-600 mb-3">للتواصل المباشر أو المشاركة:</p>
-                            <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                               <a href="tel:${data.phone1}" class="flex items-center justify-center gap-2 p-3 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-all font-semibold text-sm">
-                                   <i class="fas fa-phone-alt"></i><span>اتصال</span>
-                               </a>
-                               <a href="${whatsappLink}" target="_blank" class="flex items-center justify-center gap-2 p-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all font-semibold text-sm">
-                                   <i class="fab fa-whatsapp"></i><span>واتساب</span>
-                               </a>
-                               <a href="${telegramLink}" target="_blank" class="flex items-center justify-center gap-2 p-3 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-all font-semibold text-sm">
-                                   <i class="fab fa-telegram-plane"></i><span>تيليجرام</span>
-                               </a>
-                               <a href="${facebookLink}" target="_blank" class="flex items-center justify-center gap-2 p-3 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-all font-semibold text-sm">
-                                   <i class="fab fa-facebook-f"></i><span>فيسبوك</span>
-                               </a>
-                               <a href="${messengerLink}" target="_blank" class="flex items-center justify-center gap-2 p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-semibold text-sm">
-                                   <i class="fab fa-facebook-messenger"></i><span>ماسنجر</span>
-                               </a>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-3 pt-2"><i class="fas fa-exclamation-circle text-2xl text-gray-400"></i><span class="text-sm font-semibold px-3 py-1 rounded-full ${urgencyClass}">${urgencyText}</span></div>
+                        <div class="flex items-center gap-3"><i class="fas fa-phone text-2xl text-gray-400"></i><a href="tel:${data.phone1}" class="text-blue-600 text-xl font-semibold tracking-wider hover:underline" dir="ltr">${data.phone1}</a></div>
+                        <div class="flex items-center gap-3"><i class="fas fa-exclamation-circle text-2xl text-gray-400"></i><span class="text-sm font-semibold px-3 py-1 rounded-full ${urgencyClass}">${urgencyText}</span></div>
                     </div>
                     <div class="mt-6 pt-4 border-t text-sm text-gray-500">
                         <span>أضيف بتاريخ: ${date}</span>
@@ -187,20 +198,23 @@
             actionButtons.classList.remove('hidden');
 
             document.getElementById('show-share-modal-btn').onclick = showShareModal;
+            reportRequestBtn.onclick = () => {
+                reportRequestIdInput.value = data.id;
+                toggleModal(reportReasonModal);
+            };
         };
 
         const showError = (message) => {
             loader.innerHTML = `<div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg" role="alert"><p class="font-bold">حدث خطأ</p><p>${message}</p></div>`;
         };
         
-        // --- [بداية] وظيفة النافذة المنبثقة الجديدة والمحسّنة للـ WebView ---
         function showShareModal() {
             const shareUrl = window.location.href;
-            // هذا النص يحتوي على تفاصيل الحالة والرابط، وهو ما سيتم مشاركته
             const shareText = `🚨 *طلب تبرع دم عاجل* 🚨\n\n*الفصيلة المطلوبة:* ${requestData.bloodType}\n*المستشفى:* ${requestData.hospital}, ${requestData.wilaya}\n*للتواصل المباشر:* ${requestData.phone1}\n\n*لمزيد من التفاصيل عبر الرابط:*\n${shareUrl}`;
             const phoneNumber = requestData.phone1.replace(/\D/g, '');
+            const whatsappLink = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+            const telegramLink = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
 
-            // وظيفة مساعدة لنسخ النص إلى الحافظة
             const copyToClipboard = (text) => {
                 if (navigator.clipboard && window.isSecureContext) {
                     navigator.clipboard.writeText(text).then(() => {
@@ -238,8 +252,14 @@
                             <a href="tel:${phoneNumber}" class="w-full flex items-center justify-center gap-3 p-4 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-all text-lg">
                                 <i class="fas fa-phone-alt text-xl"></i><span class="font-semibold">اتصال هاتفي مباشر</span>
                             </a>
-                            <button id="native-share-btn" class="w-full flex items-center justify-center gap-3 p-4 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-all text-lg">
-                                <i class="fas fa-share-square text-xl"></i><span class="font-semibold">مشاركة النداء عبر التطبيقات</span>
+                            <a href="${whatsappLink}" target="_blank" class="w-full flex items-center justify-center gap-3 p-4 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all text-lg">
+                               <i class="fab fa-whatsapp text-xl"></i><span class="font-semibold">مشاركة عبر واتساب</span>
+                            </a>
+                            <a href="${telegramLink}" target="_blank" class="w-full flex items-center justify-center gap-3 p-4 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-all text-lg">
+                               <i class="fab fa-telegram-plane text-xl"></i><span class="font-semibold">مشاركة عبر تيليجرام</span>
+                            </a>
+                            <button id="native-share-btn" class="w-full flex items-center justify-center gap-3 p-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-lg">
+                                <i class="fas fa-share-square text-xl"></i><span class="font-semibold">مشاركة عبر تطبيقات أخرى</span>
                             </button>
                             <button id="copy-link-btn" class="w-full flex items-center justify-center gap-3 p-4 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all text-lg">
                                 <i class="fas fa-copy text-xl"></i><span class="font-semibold">نسخ النص والرابط</span>
@@ -249,9 +269,8 @@
                 </div>
             </div>`;
             
-            modalContainer.innerHTML = modalHTML;
+            shareModalContainer.innerHTML = modalHTML;
 
-            // ربط الأحداث مع الأزرار الجديدة
             document.getElementById('copy-link-btn').onclick = () => {
                 copyToClipboard(shareText);
             };
@@ -262,39 +281,61 @@
                     text: shareText,
                     url: shareUrl,
                 };
-
-                // 1. التحقق من وجود واجهة أندرويد البرمجية (لـ WebView)
                 if (window.Android && typeof window.Android.shareText === 'function') {
                     window.Android.shareText(shareText);
-                
-                // 2. التحقق من وجود واجهة iOS البرمجية (لـ WebView)
                 } else if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.shareHandler) {
                     window.webkit.messageHandlers.shareHandler.postMessage(shareText);
-                
-                // 3. الحل البديل: استخدام Web Share API للمتصفحات الحديثة
                 } else if (navigator.share) {
                     navigator.share(shareData).catch((error) => {
                         console.error('Error sharing:', error);
-                        if (error.name !== 'AbortError') { // لا تظهر خطأ إذا ألغى المستخدم المشاركة
+                        if (error.name !== 'AbortError') {
                             showToast('حدث خطأ أثناء محاولة المشاركة.');
                         }
                     });
-                
-                // 4. الحل الأخير: نسخ النص إذا لم تكن أي من الطرق السابقة متاحة
                 } else {
                     showToast('المشاركة المباشرة غير مدعومة. تم نسخ النص بدلاً من ذلك.');
                     copyToClipboard(shareText);
                 }
             };
 
-            const close = () => { modalContainer.innerHTML = ''; };
+            const close = () => { shareModalContainer.innerHTML = ''; };
             document.getElementById('modal-close-btn-share').onclick = close;
             document.getElementById('modal-backdrop-share').onclick = (e) => { 
                 if (e.target.id === 'modal-backdrop-share') close(); 
             };
         }
-        // --- [نهاية] وظيفة النافذة المنبثقة ---
         
+        // --- START: REPORTING LOGIC ---
+        reportReasonForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('submit-report-btn');
+            if (submitBtn.disabled) return;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'جاري الإرسال...';
+            const requestId = reportRequestIdInput.value;
+            const reason = reportReasonForm.elements.reason.value;
+            const docRef = doc(db, 'donation_requests', requestId);
+            try {
+                await updateDoc(docRef, { reports: increment(1), reportReasons: arrayUnion(reason) });
+                toggleModal(reportReasonModal);
+                reportReasonForm.reset();
+                document.getElementById('message-text').textContent = 'تم إرسال بلاغك بنجاح. سيتم مراجعته قريبًا. شكرًا لك.';
+                document.getElementById('message-icon').className = 'fas fa-flag text-5xl text-amber-500 mb-4';
+                toggleModal(messageModal);
+            } catch (error) {
+                console.error("Error submitting report: ", error);
+                alert('حدث خطأ أثناء إرسال البلاغ.');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'إرسال البلاغ';
+            }
+        });
+
+        document.querySelectorAll('.close-modal-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => toggleModal(e.target.closest('.modal')));
+        });
+        // --- END: REPORTING LOGIC ---
+
         fetchRequestDetails(getRequestId());
     </script>
 </body>
