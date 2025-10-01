@@ -11,19 +11,16 @@
     <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
     <style>
         body { font-family: 'Cairo', sans-serif; background-color: #f0fdfa; }
-        .details-card { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); position: relative; }
+        .details-card { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
         .loader { border: 5px solid #f3f3f3; border-top: 5px solid #0d9488; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .verified::after { content: '✅'; font-size: 1.2rem; margin-right: 10px; vertical-align: middle; }
         #qrcode-wrapper {
-            position: absolute;
-            bottom: 1.5rem;
-            left: 1.5rem;
-            padding: 0.5rem;
+            padding: 0.75rem;
             background-color: white;
-            border-radius: 0.375rem;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            text-align: center;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            display: inline-block;
         }
         #toast-notification {
             position: fixed;
@@ -64,21 +61,21 @@
             <div id="request-details" class="hidden"></div>
         </div>
 
-        <div id="action-buttons" class="hidden max-w-2xl mx-auto mt-6 flex flex-col sm:flex-row gap-4">
-             <button id="copy-link-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition">
+        <div id="action-buttons" class="hidden max-w-2xl mx-auto mt-8 grid grid-cols-2 lg:grid-cols-4 gap-3">
+             <button id="copy-link-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition">
                 <i class="fas fa-copy"></i>
                 <span>نسخ الرابط</span>
             </button>
-            <button id="share-link-btn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition">
-                <i class="fas fa-share-alt"></i> <span>مشاركة الرابط</span>
+            <button id="share-link-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition">
+                <i class="fas fa-share-alt"></i> <span>مشاركة</span>
             </button>
-            <button id="share-image-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition">
+            <button id="share-image-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition">
                 <i class="fas fa-image"></i>
-                <span>مشاركة الصورة</span>
+                <span>صورة</span>
             </button>
-            <button id="download-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition">
-                <i class="fas fa-download"></i>
-                <span>تحميل كصورة</span>
+            <button id="open-browser-btn" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition">
+                <i class="fas fa-globe"></i>
+                <span>المتصفح</span>
             </button>
         </div>
     </main>
@@ -89,7 +86,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Your Firebase configuration remains unchanged
         const firebaseConfig = {
           apiKey: "AIzaSyBjGbfd-myjqLtqvdMp4b-h4LIaeZjfUto",
           authDomain: "altabarue-bialdam.firebaseapp.com",
@@ -104,10 +100,10 @@
         const loader = document.getElementById('loader');
         const requestDetailsContainer = document.getElementById('request-details');
         const actionButtons = document.getElementById('action-buttons');
-        const downloadBtn = document.getElementById('download-btn');
         const shareLinkBtn = document.getElementById('share-link-btn');
         const shareImageBtn = document.getElementById('share-image-btn');
         const copyLinkBtn = document.getElementById('copy-link-btn');
+        const openBrowserBtn = document.getElementById('open-browser-btn'); // New button
         const toast = document.getElementById('toast-notification');
 
         let requestDataForShare = {};
@@ -140,7 +136,7 @@
                 }
             } catch (error) {
                 console.error("Firebase Error:", error);
-                showError("حدث خطأ أثناء الاتصال بقاعدة البيانات. الرجاء التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.");
+                showError("حدث خطأ أثناء الاتصال بقاعدة البيانات.");
             }
         };
         
@@ -153,11 +149,8 @@
 
             document.title = `طلب تبرع: ${escapeHTML(data.bloodType)} في ${escapeHTML(data.hospital)} - أداة شفاء`;
 
-            // **IMPROVEMENT**: The phone number is now a clickable link with the correct "tel:" protocol.
-            // For this to work in the Android app, the WebView must be configured to handle "tel:" intents.
-            // This is a setting in the Android Studio project, not in this HTML code.
             requestDetailsContainer.innerHTML = `
-                <div id="request-card" class="bg-white p-6 sm:p-8 rounded-2xl details-card">
+                <div id="request-card" class="bg-white p-6 sm:p-8 rounded-2xl details-card overflow-hidden">
                     <div class="flex justify-between items-center pb-4 border-b">
                         <div>
                             <p class="text-gray-500">فصيلة الدم المطلوبة</p>
@@ -180,9 +173,11 @@
                             <span class="flex items-center gap-1 text-rose-600"><i class="fas fa-thumbs-down"></i> ${data.dislikes || 0}</span>
                         </div>
                     </div>
-                    <div id="qrcode-wrapper">
-                         <span class="text-xs text-gray-600 font-bold block mb-1">أداة شفاء</span>
-                         <div id="qrcode-container"></div>
+                    <div class="mt-8 pt-6 border-t text-center">
+                         <div id="qrcode-wrapper">
+                            <div id="qrcode-container"></div>
+                         </div>
+                         <p class="text-xs text-gray-500 mt-2 font-semibold">أداة شفاء - للمشاركة السريعة</p>
                     </div>
                 </div>
             `;
@@ -193,13 +188,13 @@
 
             try {
                 new QRCode(document.getElementById("qrcode-container"), {
-                    text: window.location.href, // QR Code now links to the current request
-                    width: 80, height: 80, correctLevel : QRCode.CorrectLevel.H
+                    text: window.location.href,
+                    width: 90, height: 90, correctLevel : QRCode.CorrectLevel.H
                 });
             } catch (e) {
                 console.error("Could not generate QR Code:", e);
                 const qrWrapper = document.getElementById("qrcode-wrapper");
-                if (qrWrapper) qrWrapper.style.display = 'none';
+                if (qrWrapper) qrWrapper.parentElement.style.display = 'none';
             }
         };
 
@@ -207,23 +202,36 @@
             loader.innerHTML = `<div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg" role="alert"><p class="font-bold">حدث خطأ</p><p>${message}</p></div>`;
         };
         
-        const generateCanvasFromCard = async () => {
+        const generateAndOpenImage = async () => {
              const card = document.getElementById('request-card');
              if (!card) return null;
              
-             // Hide QR code before capture to prevent it from showing a link to itself
-             const qrCode = card.querySelector('#qrcode-wrapper');
-             if (qrCode) qrCode.style.visibility = 'hidden';
+             const qrSection = card.querySelector('#qrcode-wrapper').parentElement;
+             if (qrSection) qrSection.style.visibility = 'hidden';
              
-             const canvas = await html2canvas(card, {
-                 scale: 2.5, // Increased resolution for better quality
-                 backgroundColor: '#ffffff',
-                 useCORS: true,
-                 logging: false
-             });
+             try {
+                const canvas = await html2canvas(card, {
+                     scale: 2.5,
+                     backgroundColor: '#ffffff',
+                     useCORS: true,
+                     logging: false
+                 });
 
-             if (qrCode) qrCode.style.visibility = 'visible'; // Show it again
-             return canvas;
+                const imageURL = canvas.toDataURL('image/png');
+                // The '_blank' target is a request to open in a new tab/window.
+                // The Android WebView must be configured to handle this by launching an external browser.
+                const newWindow = window.open(imageURL, '_blank');
+                if (newWindow) {
+                    showToast('تم فتح الصورة، اضغط مطولاً عليها للحفظ.');
+                } else {
+                    showToast('فشل فتح نافذة جديدة. يرجى تفعيل النوافذ المنبثقة.');
+                }
+             } catch(err) {
+                console.error('Image generation/opening failed:', err);
+                showToast('حدث خطأ أثناء إنشاء الصورة.');
+             } finally {
+                if (qrSection) qrSection.style.visibility = 'visible';
+             }
         };
 
         // --- Button Logic ---
@@ -237,36 +245,10 @@
             });
         });
         
-        /**
-         * **IMPROVEMENT FOR WEBVIEW**
-         * This function now opens the generated image in a new browser tab.
-         * From there, the user can easily long-press the image and select "Save to gallery" or "Download".
-         * This is much more reliable inside a WebView than trying to force a download directly.
-         */
-        downloadBtn.addEventListener('click', async () => {
-            const originalText = downloadBtn.innerHTML;
-            downloadBtn.innerHTML = '<span><i class="fas fa-spinner fa-spin mr-2"></i>جاري التجهيز...</span>';
-            downloadBtn.disabled = true;
-            
-            showToast('بدأ تجهيز الصورة...');
-            try {
-                const canvas = await generateCanvasFromCard();
-                if (canvas) {
-                    const imageURL = canvas.toDataURL('image/png');
-                    // Open the image in a new tab. This is the key change for WebView compatibility.
-                    const newWindow = window.open();
-                    newWindow.document.write(`<img src="${imageURL}" style="max-width: 100%; height: auto;" alt="Donation Request"/>`);
-                    showToast('تم فتح الصورة، اضغط مطولاً عليها للحفظ.');
-                } else {
-                    throw new Error("Canvas generation failed.");
-                }
-            } catch (err) {
-                console.error('Download failed:', err);
-                showToast('حدث خطأ أثناء إنشاء الصورة.');
-            } finally {
-                downloadBtn.innerHTML = originalText;
-                downloadBtn.disabled = false;
-            }
+        openBrowserBtn.addEventListener('click', () => {
+            // This directly attempts to open the current page's URL in a new tab,
+            // which should be handled by the external browser in a properly configured WebView.
+            window.open(window.location.href, '_blank');
         });
         
         shareLinkBtn.addEventListener('click', async () => {
@@ -276,17 +258,13 @@
                 url: window.location.href
             };
             try {
-                // The Web Share API is the modern way and works in recent WebViews.
-                // It will open the native Android share dialog.
                 if (navigator.share) {
                     await navigator.share(shareData);
                 } else {
-                    // Fallback for older WebViews: copy the link and notify the user.
                     navigator.clipboard.writeText(shareData.url);
                     showToast('المشاركة غير مدعومة، تم نسخ الرابط بدلاً من ذلك!');
                 }
             } catch (err) { 
-                // Ignore "AbortError" which happens when the user closes the share dialog
                 if (err.name !== 'AbortError') {
                     console.error("Share failed:", err); 
                     showToast('فشلت عملية المشاركة.');
@@ -294,15 +272,9 @@
             }
         });
 
-        /**
-         * **IMPROVEMENT FOR WEBVIEW**
-         * This now has a more robust fallback. If sharing the image directly fails
-         * or isn't supported, it will trigger the improved download function, which
-         * opens the image for the user to save and share manually.
-         */
         shareImageBtn.addEventListener('click', async () => {
             const originalText = shareImageBtn.innerHTML;
-            shareImageBtn.innerHTML = '<span><i class="fas fa-spinner fa-spin mr-2"></i>جاري التجهيز...</span>';
+            shareImageBtn.innerHTML = '<span><i class="fas fa-spinner fa-spin mr-2"></i></span>';
             shareImageBtn.disabled = true;
 
             try {
@@ -310,22 +282,18 @@
                 if(!canvas) throw new Error("Could not generate canvas.");
 
                 const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-                if(!blob) throw new Error("Could not convert canvas to blob.");
-
-                const file = new File([blob], `shifaa-request-${getRequestId() || 'file'}.png`, { type: 'image/png' });
-                const shareData = {
-                    title: 'طلب تبرع بالدم عاجل',
-                    text: `حالة عاجلة، فصيلة: ${requestDataForShare.bloodType}\nالمستشفى: ${requestDataForShare.hospital}`,
-                    files: [file]
-                };
-
-                // Check if sharing files is supported. This will open the native Android share dialog.
+                const file = new File([blob], `shifaa-request.png`, { type: 'image/png' });
+                
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share(shareData);
+                    await navigator.share({
+                        title: 'طلب تبرع بالدم عاجل',
+                        text: `حالة عاجلة، فصيلة: ${requestDataForShare.bloodType}\nالمستشفى: ${requestDataForShare.hospital}`,
+                        files: [file]
+                    });
                 } else {
-                    // Robust fallback for WebViews: inform the user and trigger the reliable download method.
-                    showToast('مشاركة الصور غير مدعومة، سيتم فتح الصورة لتحميلها.');
-                    downloadBtn.click(); // Use our improved download function.
+                    // Robust fallback: Open the image for the user to save and share manually.
+                    showToast('سيتم فتح الصورة للحفظ والمشاركة...');
+                    await generateAndOpenImage();
                 }
             } catch (err) {
                  if (err.name !== 'AbortError') {
@@ -333,7 +301,7 @@
                     showToast("فشلت مشاركة الصورة.");
                 }
             } finally {
-                shareImageBtn.innerHTML = originalText;
+                shareImageBtn.innerHTML = '<i class="fas fa-image"></i><span>صورة</span>';
                 shareImageBtn.disabled = false;
             }
         });
