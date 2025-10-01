@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تفاصيل طلب التبرع - أداة شفاء</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #f0fdfa; }
+        .details-card { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); position: relative; }
+        .loader { border: 5px solid #f3f3f3; border-top: 5px solid #0d9488; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .verified::after { content: '✅'; font-size: 1.2rem; margin-right: 10px; vertical-align: middle; }
+        #qrcode-wrapper {
+            position: absolute;
+            bottom: 1.5rem;
+            left: 1.5rem;
+            padding: 0.5rem;
+            background-color: white;
+            border-radius: 0.375rem;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <header class="bg-white shadow-md">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <a href="index.html" class="text-3xl font-extrabold text-teal-600">أداة شفاء</a>
+            <a href="requests.html" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-5 rounded-full transition shadow-md">
+                <i class="fas fa-arrow-left mr-2"></i> العودة للطلبات
+            </a>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-12">
+        <div id="request-card-container" class="max-w-2xl mx-auto">
+            <div id="loader" class="text-center py-20 flex flex-col items-center">
+                <div class="loader mb-4"></div>
+                <p class="text-xl text-gray-500">جاري تحميل تفاصيل الطلب...</p>
+            </div>
+            <div id="request-details" class="hidden"></div>
+        </div>
+
+        <div id="action-buttons" class="hidden max-w-2xl mx-auto mt-6 flex flex-col sm:flex-row gap-4">
+             <button id="copy-link-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition">
+                <i class="fas fa-copy"></i>
+                <span>نسخ الرابط</span>
+            </button>
+            <button id="share-link-btn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition">
+                <i class="fas fa-link"></i>
+                <span>مشاركة الرابط</span>
+            </button>
+            <button id="share-image-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition">
+                <i class="fas fa-image"></i>
+                <span>مشاركة الصورة</span>
+            </button>
+            <button id="download-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition">
+                <i class="fas fa-download"></i>
+                <span>تحميل كصورة</span>
+            </button>
+        </div>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyBjGbfd-myjqLtqvdMp4b-h4LIaeZjfUto",
+          authDomain: "altabarue-bialdam.firebaseapp.com",
+          projectId: "altabarue-bialdam",
+          storageBucket: "altabarue-bialdam.appspot.com",
+          messagingSenderId: "1032387539358",
+          appId: "1:1032387539358:web:229d33a9d5a0f522c9268f"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const loader = document.getElementById('loader');
+        const requestDetailsContainer = document.getElementById('request-details');
+        const actionButtons = document.getElementById('action-buttons');
+        const downloadBtn = document.getElementById('download-btn');
+        const shareLinkBtn = document.getElementById('share-link-btn');
+        const shareImageBtn = document.getElementById('share-image-btn');
+        const copyLinkBtn = document.getElementById('copy-link-btn');
+
+        let requestDataForShare = {};
+
+        const escapeHTML = str => str ? str.replace(/[&<>"']/g, match => ({'&': '&amp;','<': '&lt;','>': '&gt;','"': '&quot;',"'": '&#39;'})[match]) : '';
+
+        const getRequestId = () => {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('id');
+        };
+
+        const fetchRequestDetails = async (id) => {
+            if (!id) {
+                showError("خطأ: رابط الصفحة غير صحيح، لم يتم العثور على مُعرّف الطلب.");
+                return;
+            }
+
+            try {
+                const docRef = doc(db, 'donation_requests', id);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    requestDataForShare = docSnap.data();
+                    displayRequestDetails(requestDataForShare);
+                } else {
+                    showError("هذا الطلب غير موجود أو قد تم حذفه.");
+                }
+            } catch (error) {
+                console.error("Firebase Error:", error);
+                showError("حدث خطأ أثناء الاتصال بقاعدة البيانات. الرجاء التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.");
+            }
+        };
+        
+        const displayRequestDetails = (data) => {
+            const date = (data.createdAt && data.createdAt.seconds) ? new Date(data.createdAt.seconds * 1000).toLocaleString('ar-DZ') : 'غير متوفر';
+            let urgencyText, urgencyClass;
+            if (data.urgency === 'urgent') { urgencyText = 'عاجل جداً'; urgencyClass = 'bg-rose-100 text-rose-800'; }
+            else if (data.urgency === 'soon') { urgencyText = 'قريب'; urgencyClass = 'bg-amber-100 text-amber-800'; }
+            else { urgencyText = 'غير مستعجل'; urgencyClass = 'bg-green-100 text-green-800'; }
+
+            document.title = `طلب تبرع: ${escapeHTML(data.bloodType)} في ${escapeHTML(data.hospital)} - أداة شفاء`;
+
+            requestDetailsContainer.innerHTML = `
+                <div id="request-card" class="bg-white p-6 sm:p-8 rounded-2xl details-card">
+                    <div class="flex justify-between items-center pb-4 border-b">
+                        <div>
+                            <p class="text-gray-500">فصيلة الدم المطلوبة</p>
+                            <p class="text-6xl font-extrabold text-rose-600">${escapeHTML(data.bloodType)}</p>
+                        </div>
+                        <i class="fas fa-tint text-6xl text-rose-200"></i>
+                    </div>
+                    <div class="mt-6 space-y-4">
+                        <div class="flex items-start gap-3"><i class="fas fa-hospital text-2xl text-gray-400 mt-1"></i>
+                            <div><h3 class="text-lg font-bold text-gray-800 ${data.verified ? 'verified' : ''}">${escapeHTML(data.hospital)}</h3><p class="text-gray-600">${escapeHTML(data.wilaya)}, ${escapeHTML(data.location)}</p></div>
+                        </div>
+                        <div class="flex items-center gap-3"><i class="fas fa-phone text-2xl text-gray-400"></i><a href="tel:${escapeHTML(data.phone1)}" class="text-blue-600 text-xl font-semibold tracking-wider hover:underline" dir="ltr">${escapeHTML(data.phone1)}</a></div>
+                        <div class="flex items-center gap-3"><i class="fas fa-exclamation-circle text-2xl text-gray-400"></i><span class="text-sm font-semibold px-3 py-1 rounded-full ${urgencyClass}">${urgencyText}</span></div>
+                        ${data.details ? `<div class="pt-4 border-t"><p class="text-gray-700 bg-gray-50 p-3 rounded-lg">${escapeHTML(data.details)}</p></div>` : ''}
+                    </div>
+                    <div class="mt-6 pt-4 border-t flex justify-between items-center text-sm text-gray-500">
+                        <span>أضيف بتاريخ: ${date}</span>
+                        <div class="flex items-center gap-4">
+                            <span class="flex items-center gap-1 text-green-600"><i class="fas fa-thumbs-up"></i> ${data.likes || 0}</span>
+                            <span class="flex items-center gap-1 text-rose-600"><i class="fas fa-thumbs-down"></i> ${data.dislikes || 0}</span>
+                        </div>
+                    </div>
+                    <div id="qrcode-wrapper">
+                         <span class="text-xs text-gray-600 font-bold block mb-1">أداة شفاء</span>
+                         <div id="qrcode-container"></div>
+                    </div>
+                </div>
+            `;
+            
+            loader.classList.add('hidden');
+            requestDetailsContainer.classList.remove('hidden');
+            actionButtons.classList.remove('hidden');
+
+            try {
+                new QRCode(document.getElementById("qrcode-container"), {
+                    text: "https://adatshifa.github.io/altabarue_bialdam/home_altabarue_bialdam.html",
+                    width: 80,
+                    height: 80,
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+            } catch (e) {
+                console.error("Could not generate QR Code:", e);
+                const qrWrapper = document.getElementById("qrcode-wrapper");
+                if (qrWrapper) qrWrapper.style.display = 'none';
+            }
+        };
+
+        const showError = (message) => {
+            loader.innerHTML = `<div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg" role="alert"><p class="font-bold">حدث خطأ</p><p>${message}</p></div>`;
+        };
+        
+        const generateImageBlob = async () => {
+             const card = document.getElementById('request-card');
+             if (card) {
+                // Temporarily hide QR code before taking screenshot if it overlaps with content
+                const qrCode = card.querySelector('#qrcode-wrapper');
+                if (qrCode) qrCode.style.visibility = 'hidden';
+                
+                const canvas = await html2canvas(card, {
+                    backgroundColor: '#f0fdfa',
+                    scale: 2 
+                });
+
+                if (qrCode) qrCode.style.visibility = 'visible'; // Show it again
+                return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+             }
+             return null;
+        };
+
+        copyLinkBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(window.location.href).then(() => {
+                const originalContent = copyLinkBtn.innerHTML;
+                copyLinkBtn.innerHTML = '<span>تم النسخ بنجاح! ✅</span>';
+                copyLinkBtn.disabled = true;
+                setTimeout(() => {
+                    copyLinkBtn.innerHTML = originalContent;
+                    copyLinkBtn.disabled = false;
+                }, 2500);
+            }).catch(err => {
+                console.error('Failed to copy link: ', err);
+                alert('فشل نسخ الرابط.');
+            });
+        });
+
+        downloadBtn.addEventListener('click', async () => {
+            const originalText = downloadBtn.innerHTML;
+            downloadBtn.innerHTML = '<span>جاري التجهيز...</span>';
+            downloadBtn.disabled = true;
+            const blob = await generateImageBlob();
+            if(blob){
+                const link = document.createElement('a');
+                link.download = `shifaa-request-${getRequestId()}.png`;
+                link.href = URL.createObjectURL(blob);
+                link.click();
+                URL.revokeObjectURL(link.href);
+            }
+            downloadBtn.innerHTML = originalText;
+            downloadBtn.disabled = false;
+        });
+        
+        shareLinkBtn.addEventListener('click', async () => {
+            const shareData = {
+                title: 'طلب تبرع بالدم عاجل',
+                text: `حالة بحاجة ماسة للتبرع بالدم، فصيلة: ${requestDataForShare.bloodType} في ${requestDataForShare.hospital}`,
+                url: window.location.href
+            };
+            try {
+                if (navigator.share) {
+                    await navigator.share(shareData);
+                } else {
+                    navigator.clipboard.writeText(window.location.href);
+                    alert('تم نسخ الرابط! يمكنك الآن مشاركته.');
+                }
+            } catch (err) { console.error("Share failed:", err); }
+        });
+
+        shareImageBtn.addEventListener('click', async () => {
+            const originalText = shareImageBtn.innerHTML;
+            shareImageBtn.innerHTML = '<span>جاري التجهيز...</span>';
+            shareImageBtn.disabled = true;
+
+            try {
+                const blob = await generateImageBlob();
+                if(!blob) throw new Error("Could not generate image blob.");
+
+                const file = new File([blob], `shifaa-request-${getRequestId()}.png`, { type: 'image/png' });
+
+                const shareData = {
+                    title: 'طلب تبرع بالدم عاجل',
+                    text: `حالة عاجلة، فصيلة: ${requestDataForShare.bloodType}\nالمستشفى: ${requestDataForShare.hospital}\nالرابط: ${window.location.href}`,
+                    files: [file]
+                };
+
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share(shareData);
+                } else {
+                    alert('متصفحك لا يدعم مشاركة الصور مباشرة. سيتم تحميل الصورة بدلاً من ذلك.');
+                    downloadBtn.click();
+                }
+            } catch (err) {
+                console.error("Image share failed:", err);
+                alert("فشلت عملية المشاركة. قد لا يكون متصفحك مدعومًا.");
+            } finally {
+                shareImageBtn.innerHTML = originalText;
+                shareImageBtn.disabled = false;
+            }
+        });
+        
+        fetchRequestDetails(getRequestId());
+    </script>
+</body>
+</html>

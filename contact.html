@@ -6,7 +6,8 @@
     <title>تواصل معنا - أداة شفاء</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display.swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
     <style>
         body { font-family: 'Cairo', sans-serif; background-color: #f0fdfa; color: #1f2937; }
         .custom-shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.07); }
@@ -90,7 +91,32 @@
 
             </div>
         </section>
+        
+        <section class="mt-16 bg-white p-8 rounded-2xl custom-shadow-lg max-w-2xl mx-auto flex flex-col sm:flex-row items-center gap-8">
+            <div id="website-qrcode" class="p-2 border rounded-lg bg-white shadow-inner"></div>
+            <div>
+                <h2 class="text-3xl font-bold text-gray-800 mb-2">شارك الموقع بسهولة!</h2>
+                <p class="text-gray-600">امسح الرمز بكاميرا هاتفك لزيارة موقعنا مباشرة، أو لمشاركته مع الأصدقاء والعائلة. كل مشاركة تساهم في نشر الخير.</p>
+            </div>
+        </section>
+
     </main>
+
+    <script>
+        // +++ شيفرة إنشاء QR Code عند تحميل الصفحة +++
+        document.addEventListener("DOMContentLoaded", function() {
+            const websiteUrl = "https://adatshifa.github.io/altabarue_bialdam/home_altabarue_bialdam.html";
+            
+            new QRCode(document.getElementById("website-qrcode"), {
+                text: websiteUrl,
+                width: 128,
+                height: 128,
+                colorDark : "#0d9488", // Teal color for the QR code
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+        });
+    </script>
 
 </body>
 </html>

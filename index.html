@@ -36,7 +36,6 @@
             border-left: 5px solid var(--primary-color);
             background-color: #f0fdfa;
         }
-        /* Style for the dropdown arrow */
         select {
             -webkit-appearance: none;
             -moz-appearance: none;
@@ -45,9 +44,8 @@
             background-repeat: no-repeat;
             background-position: left 0.75rem center;
             background-size: 1.25em;
-            padding-right: 1rem; /* Adjust padding to not overlap text */
+            padding-right: 1rem;
         }
-        /* Styles for voting buttons */
         .vote-btn.voted-like { color: var(--primary-color); }
         .vote-btn.voted-dislike { color: var(--secondary-color); }
     </style>
@@ -310,34 +308,25 @@
     async function handleVote(requestId, voteType) {
         const docRef = doc(db, 'donation_requests', requestId);
         const currentVote = votesManager.getVote(requestId);
-
-        // If user clicks the same button again, do nothing.
         if (currentVote === voteType) return;
         
-        // Optimistically update the UI for instant feedback
         votesManager.setVote(requestId, voteType);
         const cardElement = document.querySelector(`.vote-btn[data-id="${requestId}"]`).closest('.bg-white');
         if (cardElement) {
            votesManager.updateCardUI(cardElement);
         }
-
-        // Prepare database updates
         const updates = {};
-        updates[`${voteType}s`] = increment(1); // Increment the new vote
+        updates[`${voteType}s`] = increment(1);
         
-        // If there was a previous vote, decrement the old one
         if (currentVote) {
             const oppositeVoteType = currentVote === 'like' ? 'dislikes' : 'likes';
             updates[oppositeVoteType] = increment(-1);
         }
         
-        // Send updates to Firebase
         try {
             await updateDoc(docRef, updates);
-            // onSnapshot will handle updating the vote counts automatically
         } catch (error) {
             console.error("Error processing vote: ", error);
-            // If the update fails, revert the optimistic UI change
             votesManager.setVote(requestId, currentVote); 
              if (cardElement) {
                 votesManager.updateCardUI(cardElement);
@@ -359,51 +348,25 @@
         if (interval > 1) return `قبل ${Math.floor(interval)} ساعة`; interval = seconds / 60;
         if (interval > 1) return `قبل ${Math.floor(interval)} دقيقة`; return "قبل لحظات";
     };
-    const fetchAndDisplayRequests = () => {
-        const q = query(collection(db, 'donation_requests'), orderBy('createdAt', 'desc'), limit(6));
-        const lastVisitTimestamp = localStorage.getItem('lastVisitTimestamp');
-
-        onSnapshot(q, (snapshot) => {
-            const fetchedRequests = [];
-            snapshot.docChanges().forEach((change) => {
-                if (change.type === 'added' || change.type === 'modified') {
-                    fetchedRequests.push({ id: change.doc.id, ...change.doc.data() });
-                }
-            });
-
-            const newlyAddedRequests = [];
-            if (isInitialLoad) {
-                snapshot.docs.forEach(doc => knownRequestIds.add(doc.id));
-                isInitialLoad = false;
-            } else {
-                 snapshot.docChanges().forEach((change) => {
-                    if (change.type === 'added' && !knownRequestIds.has(change.doc.id)) {
-                        newlyAddedRequests.push({ id: change.doc.id, ...change.doc.data() });
-                        knownRequestIds.add(change.doc.id);
-                    }
-                });
-            }
-
-            dashboard.innerHTML = '';
-            const allDocs = snapshot.docs;
-            if (allDocs.length === 0) { dashboard.innerHTML = `<div class="text-center p-10 bg-white rounded-xl custom-shadow-lg md:col-span-3"><p class="text-gray-500 text-xl">لا توجد حالات حالياً.</p></div>`; return; }
-            
-            allDocs.forEach((doc) => {
-                const requestData = { id: doc.id, ...doc.data() };
-                const card = document.createElement('div');
-                const requestDate = requestData.createdAt ? requestData.createdAt.toDate() : new Date();
-                const isUnseen = lastVisitTimestamp && requestDate.getTime() > lastVisitTimestamp;
-                const cardClasses = `bg-white p-5 rounded-xl custom-shadow-lg transition duration-300 transform hover:-translate-y-1 ${requestData.urgency}`;
-                card.className = isUnseen ? `${cardClasses} unseen-request` : cardClasses;
-                
-                card.innerHTML = `
-                ${isUnseen ? '<div class="text-xs font-bold text-teal-700 mb-2">جديد منذ زيارتك الأخيرة</div>' : ''}
-                <div class="flex justify-between items-start gap-4">
-                    <div><h3 class="text-xl font-bold text-gray-800 ${requestData.verified ? 'verified' : ''}">${requestData.hospital}</h3><p class="text-gray-600">${requestData.wilaya}, ${requestData.location}</p></div>
-                    <div class="bg-rose-500 text-white font-bold text-2xl p-2 rounded-full w-16 h-16 flex items-center justify-center shadow-lg flex-shrink-0">${requestData.bloodType}</div>
-                </div>
-                <div class="my-4 border-t pt-4">
-                    <p class="flex items-center gap-2 text-lg" dir="ltr"><i class="fas fa-phone text-gray-400"></i><a href="tel:${requestData.phone1}" class="text-blue-600 hover:underline tracking-wider">${requestData.phone1}</a></p>
+    
+    // ============= MODIFIED FUNCTION ===============
+    const createCardHTML = (doc) => {
+        const requestData = { id: doc.id, ...doc.data() };
+        const requestDate = requestData.createdAt ? requestData.createdAt.toDate() : new Date();
+        
+        return `
+            <div class="flex flex-col bg-white p-5 rounded-xl custom-shadow-lg transition duration-300 transform hover:-translate-y-1 ${requestData.urgency}">
+                <div class="flex-grow">
+                    <div class="flex justify-between items-start gap-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-800 ${requestData.verified ? 'verified' : ''}">${requestData.hospital}</h3>
+                            <p class="text-gray-600">${requestData.wilaya}, ${requestData.location}</p>
+                        </div>
+                        <div class="bg-rose-500 text-white font-bold text-2xl p-2 rounded-full w-16 h-16 flex items-center justify-center shadow-lg flex-shrink-0">${requestData.bloodType}</div>
+                    </div>
+                    <div class="my-4 border-t pt-4">
+                        <p class="flex items-center gap-2 text-lg" dir="ltr"><i class="fas fa-phone text-gray-400"></i><a href="tel:${requestData.phone1}" class="text-blue-600 hover:underline tracking-wider">${requestData.phone1}</a></p>
+                    </div>
                 </div>
                 <div class="flex justify-between items-center text-sm text-gray-500 pt-3 border-t">
                     <p class="flex items-center gap-2" data-timestamp="${requestDate.toISOString()}"><i class="fas fa-clock"></i><span>${getTimeAgo(requestDate)}</span></p>
@@ -414,23 +377,57 @@
                         <button data-id="${requestData.id}" data-vote="dislike" class="vote-btn text-gray-500 hover:text-red-600 transition">
                             <i class="fas fa-thumbs-down"></i> <span class="dislike-count font-semibold">${requestData.dislikes || 0}</span>
                         </button>
-                        <button data-id="${requestData.id}" class="report-btn bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold py-1 px-3 rounded-lg transition text-xs">
-                            <i class="fas fa-flag"></i> إبلاغ
-                        </button>
                     </div>
-                </div>`;
-                dashboard.appendChild(card);
-                votesManager.updateCardUI(card); // Apply correct vote style after rendering
-            });
+                </div>
+                <div class="flex justify-between items-center mt-4 pt-3 border-t">
+                     <button data-id="${requestData.id}" class="report-btn bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold py-1 px-3 rounded-lg transition text-xs">
+                        <i class="fas fa-flag"></i> إبلاغ
+                    </button>
+                    <a href="request-details.html?id=${requestData.id}" class="bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold py-1 px-4 rounded-lg transition text-xs flex items-center gap-1">
+                        <i class="fas fa-eye"></i> عرض التفاصيل
+                    </a>
+                </div>
+            </div>`;
+    };
 
-            if (newlyAddedRequests.length > 0) {
-                showNewRequestAlert(newlyAddedRequests[0], newlyAddedRequests.length);
+    const fetchAndDisplayRequests = () => {
+        const q = query(collection(db, 'donation_requests'), orderBy('createdAt', 'desc'), limit(6));
+        onSnapshot(q, (snapshot) => {
+             const newRequests = [];
+            if (isInitialLoad) {
+                snapshot.docs.forEach(doc => knownRequestIds.add(doc.id));
+                isInitialLoad = false;
+            } else {
+                 snapshot.docChanges().forEach(change => {
+                    if (change.type === 'added' && !knownRequestIds.has(change.doc.id)) {
+                        newRequests.push({ id: change.doc.id, ...change.doc.data() });
+                        knownRequestIds.add(change.doc.id);
+                    }
+                });
+            }
+
+            dashboard.innerHTML = '';
+            if (snapshot.empty) { 
+                dashboard.innerHTML = `<div class="text-center p-10 bg-white rounded-xl custom-shadow-lg md:col-span-3"><p class="text-gray-500 text-xl">لا توجد حالات حالياً.</p></div>`; 
+                return; 
             }
             
+            snapshot.docs.forEach(doc => {
+                const cardHTML = createCardHTML(doc);
+                const cardElement = document.createElement('div');
+                cardElement.innerHTML = cardHTML.trim();
+                const newCard = cardElement.firstChild;
+                dashboard.appendChild(newCard);
+                votesManager.updateCardUI(newCard);
+            });
+
+            if (newRequests.length > 0) {
+                showNewRequestAlert(newRequests[0], newRequests.length);
+            }
             localStorage.setItem('lastVisitTimestamp', Date.now().toString());
         });
     };
-
+    
     const updateTimestamps = () => {
         document.querySelectorAll('[data-timestamp]').forEach(el => {
             const date = new Date(el.dataset.timestamp);
@@ -504,7 +501,7 @@
         } else if (voteBtn) {
             const requestId = voteBtn.dataset.id;
             const voteType = voteBtn.dataset.vote;
-            handleVote(requestId, voteType); // Event listener for voting
+            handleVote(requestId, voteType);
         }
     });
     reportReasonForm.addEventListener('submit', async (e) => {

@@ -16,6 +16,8 @@
         .custom-shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.07); }
         .side-bar { transition: transform 0.3s ease-in-out; }
         .overlay.active { opacity: 1; visibility: visible; }
+        .vote-btn.voted-like { color: #0d9488; }
+        .vote-btn.voted-dislike { color: #f43f5e; }
     </style>
 </head>
 <body class="antialiased">
@@ -34,13 +36,21 @@
             <h2 class="text-2xl font-bold text-teal-600">القائمة</h2>
             <button id="close-btn" class="fas fa-times text-2xl text-gray-500 cursor-pointer w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100"></button>
         </div>
-        <nav class="flex flex-col gap-3">
+        <nav class="flex-grow flex flex-col gap-3">
             <a href="donate.html" class="flex items-center gap-4 p-4 rounded-lg text-lg font-semibold hover:bg-teal-50 transition-colors"><i class="fas fa-hand-holding-heart text-teal-500 w-6 text-center"></i><span>أريد التبرع</span></a>
             <a href="requests.html" class="flex items-center gap-4 p-4 rounded-lg text-lg font-semibold hover:bg-teal-50 transition-colors"><i class="fas fa-list-alt text-teal-500 w-6 text-center"></i><span>تصفح الطلبات</span></a>
             <a href="centers.html" class="flex items-center gap-4 p-4 rounded-lg text-lg font-semibold hover:bg-teal-50 transition-colors"><i class="fas fa-hospital text-teal-500 w-6 text-center"></i><span>أماكن التبرع</span></a>
+            <a href="suggestions.html" class="flex items-center gap-4 p-4 rounded-lg text-lg font-semibold hover:bg-teal-50 transition-colors"><i class="fas fa-lightbulb text-teal-500 w-6 text-center"></i><span>اقتراحاتكم</span></a>
             <a href="why-donate.html" class="flex items-center gap-4 p-4 rounded-lg text-lg font-semibold hover:bg-teal-50 transition-colors"><i class="fas fa-question-circle text-teal-500 w-6 text-center"></i><span>لماذا علينا التبرع؟</span></a>
             <a href="contact.html" class="flex items-center gap-4 p-4 rounded-lg text-lg font-semibold hover:bg-teal-50 transition-colors"><i class="fas fa-paper-plane text-teal-500 w-6 text-center"></i><span>تواصل معنا</span></a>
         </nav>
+        <div>
+            <div class="border-t border-gray-200 my-4"></div>
+            <a href="dashboard.html" class="w-full flex items-center gap-4 p-4 rounded-lg text-lg font-semibold bg-gray-100 hover:bg-gray-200 transition-colors text-gray-700">
+                <i class="fas fa-user-shield text-gray-600 w-6 text-center"></i>
+                <span>خاص بالمشرفين</span>
+            </a>
+        </div>
     </aside>
 
     <main class="container mx-auto px-4 sm:px-6 py-12">
@@ -79,7 +89,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // --- SIDEBAR LOGIC ---
     const menuBtn = document.getElementById('menu-btn');
     const closeBtn = document.getElementById('close-btn');
     const sideBar = document.getElementById('side-bar');
@@ -92,9 +101,6 @@
     closeBtn.addEventListener('click', toggleMenu);
     overlay.addEventListener('click', toggleMenu);
 
-    // =================================================================
-    // =========== START: UNIFIED VOTING LOGIC (FINAL SOLUTION) ========
-    // =================================================================
     const votesManager = {
         votes: JSON.parse(localStorage.getItem('shifaa-votes')) || {},
         getVote(requestId) { return this.votes[requestId]; },
@@ -155,17 +161,13 @@
              alert("حدث خطأ أثناء تسجيل تصويتك. الرجاء المحاولة مرة أخرى.");
         }
     }
-    // =================================================================
-    // =========== END: UNIFIED VOTING LOGIC (FINAL SOLUTION) ==========
-    // =================================================================
 
     const dashboard = document.getElementById('dashboard');
     const searchInput = document.getElementById('search-input');
     const sortOrderSelect = document.getElementById('sort-order');
     let allRequests = [];
 
-    // NOTE: This file had two different `createCardHTML` functions. I've chosen the more detailed one from `request.html`
-    // and added the voting buttons to it to make it consistent and fully functional.
+    // ============= MODIFIED FUNCTION ===============
     const createCardHTML = (doc) => {
         const request = doc.data();
         const date = request.createdAt ? new Date(request.createdAt.seconds * 1000).toLocaleDateString('ar-DZ') : 'غير متوفر';
@@ -174,14 +176,16 @@
         else if(request.urgency === 'soon') { urgencyText = 'قريب'; urgencyClass = 'bg-amber-100 text-amber-800'; }
         else { urgencyText = 'غير مستعجل'; urgencyClass = 'bg-green-100 text-green-800'; }
 
-        return `<div class="bg-white p-5 rounded-xl custom-shadow-lg transition duration-300 transform hover:-translate-y-1 ${request.urgency}">
-                    <div class="flex justify-between items-start gap-4">
-                        <div><h3 class="text-xl font-bold text-gray-800 ${request.verified ? 'verified' : ''}">${request.hospital}</h3><p class="text-gray-600">${request.wilaya}, ${request.location}</p></div>
-                        <div class="bg-rose-500 text-white font-bold text-2xl p-2 rounded-full w-16 h-16 flex items-center justify-center shadow-lg flex-shrink-0">${request.bloodType}</div>
-                    </div>
-                    <div class="my-4 border-t pt-4 space-y-3">
-                        <p class="flex items-center gap-2" dir="ltr"><i class="fas fa-phone text-gray-400"></i><strong class="font-semibold">الهاتف:</strong> <a href="tel:${request.phone1}" class="text-blue-600 hover:underline tracking-wider">${request.phone1}</a></p>
-                        <p class="flex items-center gap-2"><i class="fas fa-exclamation-circle text-gray-400"></i><strong class="font-semibold">الاستعجال:</strong> <span class="text-sm font-semibold px-3 py-1 rounded-full ${urgencyClass}">${urgencyText}</span></p>
+        return `<div class="bg-white flex flex-col p-5 rounded-xl custom-shadow-lg transition duration-300 transform hover:-translate-y-1 ${request.urgency}">
+                    <div class="flex-grow">
+                        <div class="flex justify-between items-start gap-4">
+                            <div><h3 class="text-xl font-bold text-gray-800 ${request.verified ? 'verified' : ''}">${request.hospital}</h3><p class="text-gray-600">${request.wilaya}, ${request.location}</p></div>
+                            <div class="bg-rose-500 text-white font-bold text-2xl p-2 rounded-full w-16 h-16 flex items-center justify-center shadow-lg flex-shrink-0">${request.bloodType}</div>
+                        </div>
+                        <div class="my-4 border-t pt-4 space-y-3">
+                            <p class="flex items-center gap-2" dir="ltr"><i class="fas fa-phone text-gray-400"></i><strong class="font-semibold">الهاتف:</strong> <a href="tel:${request.phone1}" class="text-blue-600 hover:underline tracking-wider">${request.phone1}</a></p>
+                            <p class="flex items-center gap-2"><i class="fas fa-exclamation-circle text-gray-400"></i><strong class="font-semibold">الاستعجال:</strong> <span class="text-sm font-semibold px-3 py-1 rounded-full ${urgencyClass}">${urgencyText}</span></p>
+                        </div>
                     </div>
                     <div class="flex justify-between items-center text-sm text-gray-500 pt-3 border-t">
                         <p class="flex items-center gap-2"><i class="fas fa-calendar-alt"></i><span>أضيف بتاريخ: ${date}</span></p>
@@ -192,7 +196,12 @@
                             <button data-id="${doc.id}" data-vote="dislike" class="vote-btn text-gray-500 hover:text-red-600 transition">
                                 <i class="fas fa-thumbs-down"></i> <span class="dislike-count font-semibold">${request.dislikes || 0}</span>
                             </button>
-                            </div>
+                        </div>
+                    </div>
+                     <div class="mt-4 pt-3 border-t">
+                        <a href="request-details.html?id=${doc.id}" class="w-full text-center bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold py-2 px-4 rounded-lg transition text-sm flex items-center justify-center gap-1">
+                            <i class="fas fa-eye"></i> عرض التفاصيل
+                        </a>
                     </div>
                 </div>`;
     };
@@ -202,11 +211,11 @@
         if (requests.length === 0) { dashboard.innerHTML = `<div class="text-center p-10 bg-white rounded-xl custom-shadow-lg md:col-span-2 lg:col-span-3"><p class="text-gray-500 text-xl">لا توجد نتائج تطابق بحثك.</p></div>`; return; }
         requests.forEach(doc => {
             const cardHTML = createCardHTML(doc);
-            const cardElement = document.createElement('div'); // Create a wrapper to parse the HTML
+            const cardElement = document.createElement('div');
             cardElement.innerHTML = cardHTML.trim();
             const newCard = cardElement.firstChild;
             dashboard.appendChild(newCard);
-            votesManager.updateCardUI(newCard); // Apply correct vote style after rendering
+            votesManager.updateCardUI(newCard);
         });
     };
 
@@ -233,7 +242,6 @@
         });
     };
     
-    // Add main event listener for voting
     dashboard.addEventListener('click', (e) => {
         const voteBtn = e.target.closest('.vote-btn');
         if (voteBtn) {
@@ -245,7 +253,7 @@
 
     searchInput.addEventListener('input', filterAndSortRequests);
     sortOrderSelect.addEventListener('change', listenToRequests);
-    listenToRequests(); // Initial fetch
+    listenToRequests();
 </script>
 </body>
 </html>
